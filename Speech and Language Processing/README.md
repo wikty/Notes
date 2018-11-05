@@ -1,28 +1,6 @@
-## Terms
+[TOC]
 
-**Corpus** (plural corpora), a computer-readable collection of text or speech.
-
-A **utterance** is the spoken correlate of a sentence.
-
-A **lemma** is a set of lexical forms having the same stem, the same major part-of-speech, and the same word sense.
-
-**Morphology** is the study of the way words are built up from smaller meaning-bearing units called morphemes.
-
-**Morpheme** is the smallest meaningful unit in the grammar of a language. There are two broad classes of morphemes can be distinguished: stems and affixes. For example, the word cats consists of two: the morpheme cat and the morpheme -s.
-
-**Stem**, the central morpheme of the word, supplying the main meaning.
-
-**Affix**, the adding “additional” meanings of various kinds.
-
-**Wordforms**  are the different ways a word can exist in the context of a language. In English, there are many words that have the same lemma, but can be changed to be a verb, noun, adjective, or adverb by adding a suffix.
-
-**Word types** are the number of distinct words in a corpus; if the set of words in the vocabulary is V, the number of types is the word token vocabulary size |V|. When we speak about the number of words in the language, we are generally referring to word types.
-
-**Word Tokens** are the total number N of running words in a corpus.
-
-**Code switching**, It’s also quite common for speakers or writers to use multiple languages in a single communicative act, a phenomenon called code switching.
-
-**Unknow words** are words that a system has not seen before.
+# Chapter 2
 
 ## Words
 
@@ -61,7 +39,7 @@ At least three tasks are commonly applied as part of any normalization process:
 2. Normalizing word formats
 3. Segmenting sentences in running text.
 
-### Tokenization
+### Word Tokenization
 
 Tokenization is the task of segmenting running text into words.
 
@@ -133,7 +111,7 @@ the gold: the number of word insertions, deletions, and substitutions divided by
 length of the gold sentence in words;
 
 
-### Normalization
+### Word Normalization
 
 Normalization, the task of putting words/tokens in a standard format.
 
@@ -169,7 +147,7 @@ and information retrieval, everything is mapped to lower case. For sentiment ana
 and other text classification tasks, information extraction, and machine translation,
 by contrast, case is quite helpful and case folding is generally not done.
 
-### Segmenting sentences
+### Sentence Segmenting
 
 Text normalization also includes **sentence segmentation**: breaking up a text into individual sentences, using cues like periods, question marks, exclamation points. Question marks and exclamation points are relatively unambiguous markers of sentence boundaries. Periods, on the other hand, are more ambiguous. The period character “.” is ambiguous between a sentence boundary marker and a marker of abbreviations like Mr. or Inc. For this reason, sentence tokenization and word tokenization may be addressed jointly.
 
@@ -179,19 +157,206 @@ of the word or is a sentence-boundary marker. In making this decision, it helps 
 know if the period is attached to a commonly used abbreviation; thus, an abbreviation
 dictionary is useful.
 
-## Edit distance
+### Summary
+
+Text normalization algorithms has been applied since the beginning of the field.
+One of the earliest widely-used stemmers was Lovins (1968). Stemming was also
+applied early to the digital humanities, by Packard (1973), who built an affix-stripping
+morphological parser for Ancient Greek. 
+
+Currently a wide variety of code for tokenization and normalization is available, such as the Stanford Tokenizer (<http://
+nlp.stanford.edu/software/tokenizer.shtml>) or specialized tokenizers for
+Twitter (O’Connor et al., 2010), or for sentiment (<http://sentiment.christopherpotts.net/tokenizing.html>). See Palmer (2012) for a survey of text preprocessing.
+
+While the max-match algorithm we describe is commonly used as a segmentation
+baseline in languages like Chinese, higher accuracy algorithms like the Stanford
+CRF segmenter, are based on sequence models; see Tseng et al. (2005a) and Chang
+et al. (2008).
+
+NLTK is an essential tool that offers both useful Python libraries
+(http://www.nltk.org) and textbook descriptions (Bird et al., 2009) of many algorithms
+including text normalization and corpus interfaces.
+
+## Minimum edit distance
 
 Much of natural language processing is concerned with measuring how similar two
-strings are. We’ll introduce a metric called **edit distance** that measures how similar two strings are based on the number of edits (insertions, deletions, substitutions) it takes to change one string into the
-other. Edit distance is an algorithm with applications throughout language processing,
-from spelling correction to speech recognition to coreference resolution.
+strings are. We’ll introduce a metric called **edit distance** that measures how similar two strings are based on the number of edits it takes to change one string into the other. Edit distance is an algorithm with applications throughout language processing, from spelling correction to speech recognition to coreference resolution.
 
-For example in spelling correction, the user typed some erroneous
-string—let’s say graffe–and we want to know what the user meant.
+For example in spelling correction, the user typed some erroneous string—let’s say graffe–and we want to know what the user meant. Another example comes from coreference, the task of deciding whether two strings refer to the same entity.
 
-Another example comes from coreference, the task of deciding whether two strings refer to the same entity.
+More formally, the **minimum edit distance** between two strings is defined
+as the minimum number of editing operations (operations like **insertion**, **deletion**,
+**substitution**) needed to transform one string into another. For example, The distance between *intention* and *execution* is 5, the demonstration as following:
 
-More formally, the minimum edit distance between two strings is defined
-as the minimum number of editing operations (operations like insertion, deletion,
-substitution) needed to transform one string into another.
+![](edit_distance_example.jpg)
 
+We can also assign a particular cost or weight to each of these operations. The
+**Levenshtein distance** between two sequences is the simplest weighting factor in
+which each of the three operations has a cost of 1 (Levenshtein, 1966)—we assume
+that the substitution of a letter for itself, for example, t for t, has zero cost.
+
+How do we find the minimum edit distance? We can think of this as a search task, in
+which we are searching for the shortest path—a sequence of edits—from one string
+to another. The shortest path from *intention* to *execution* as following:
+
+![](edit_distance_path.jpg)
+
+
+
+We can search the shortest path by using dynamic programming. 
+
+Knowing the minimum edit distance is useful for algorithms like finding potential
+spelling error corrections. But the edit distance algorithm is important in another
+way; with a small change, it can also provide the minimum cost **alignment** between
+two strings. Aligning two strings is useful throughout speech and language processing.
+In speech recognition, minimum edit distance alignment is used to compute
+the word error rate (Chapter 26). Alignment plays a role in machine translation, in
+which sentences in a parallel corpus (a corpus with a text in two languages) need to
+be matched to each other.
+
+The **Viterbi** algorithm is a probabilistic extension of
+minimum edit distance. Instead of computing the “minimum edit distance” between
+two strings, Viterbi computes the “maximum probability alignment” of one string
+with another.
+
+# Chapter 3
+
+## N-gram Language Models
+
+We will introduce models that assign a probability to each possible next
+word. And the same models will also serve to assign a probability to an entire sentence. 
+
+Why would you want to predict upcoming words, or assign probabilities to sentences?
+Probabilities are essential in any task in which we have to identify words
+in noisy, ambiguous input, like **speech recognition** or **handwriting recognition**.  In **spelling correction**, we need to find and correct spelling errors like *Their
+are two midterms in this class*, in which *There* was mistyped as *Their*. A sentence
+starting with the phrase *There are* will be much more probable than one starting with
+*Their are*, allowing a spellchecker to both detect and correct these errors. Assigning probabilities to sequences of words is also essential in **machine translation**.
+
+### Language models
+
+Models that assign probabilities to sequences of words are called language models.
+
+Let’s begin with the task of computing P(w|h), the probability of a word w given
+some history h. Suppose the history h is “its water is so transparent that” and we
+want to know the probability that the next word is the:
+$$
+P(\text{the}|\text{its water is so transparent that})
+$$
+One way to estimate this probability is from relative frequency counts in a very large corpus:
+$$
+P(\text{the}|\text{its water is so transparent that}) = \frac{C(\text{its water is so transparent that the})}{C(\text{its water is so transparent that})}
+$$
+
+Similarly, if we wanted to know the joint probability of an entire sequence of words like "its water is so transparent":
+$$
+P(\text{its water is so transparent that}) = \frac{C(\text{its water is so transparent})}{|V|^5}
+$$
+In general, assume the probability of the entire sequences of words as following
+$$
+P(w_1,w_2, \dots ,w_N)
+$$
+Apply the chain rule of probability, we'll get
+$$
+P(w_1,w_2,\dots,w_N)=P(w_1)P(w_2|w_1)P(w_3|w_2w_1) \dots P(w_N|w_{N-1} \dots w_1)
+$$
+Can we estimate the conditional probability P(w_k|w_{k-1} \dots w_1) from relative frequency counts in a corpus?
+
+No. We can’t just estimate by counting the number of times every word occurs following every long string, because language is creative and any particular context might have never occurred before!
+
+For this reason, we’ll need to introduce cleverer ways of estimating the probability of a word w given a history h, or the probability of an entire word sequence W.
+
+### N-gram models
+
+An n-gram is a sequence of N words: a 2-gram (or bigram) is a two-word sequence of words like “please turn”, “turn your”, or ”your homework”, and a 3-gram (or trigram) is a three-word sequence of words like “please turn your”, or “turn your homework”.
+
+**Assumption**
+
+The intuition of the n-gram model is that instead of computing the probability of a word given its entire history, we can approximate the history by just the last few words.
+
+The assumption in the n-gram model is
+$$
+P(w_k|w_{k-1} \dots w_1) = P(w_k|w_{k-1} \dots w_{k-n+1}) \qquad \text{where} \; n \; \text{is the n of n-gram}
+$$
+With this assumption, the probability of the sentence is
+$$
+P(w_1,w_2, \dots ,w_N)=\prod_{k}^{N} P(w_k|w_{k-1} \dots w_{k-n+1})
+$$
+For example, the **bigram model**, approximates the probability of a word given all the previous words by using only the conditional probability of the preceding word.
+$$
+P(\text{the}|\text{its water is so transparent that})=P(\text{the}|\text{that})
+$$
+The assumption that the probability of a word depends only on the previous word is called a **Markov assumption**. Markov models are the class of probabilistic models that assume we can predict the probability of some future unit without looking too far into the past.
+
+**Estimate models**
+
+How do we estimate these bigram or n-gram probabilities? An intuitive way to estimate probabilities is called maximum likelihood estimation or MLE. We get the MLE estimate for the parameters of an n-gram model by getting counts from a corpus, and normalizing the counts so that they lie between 0 and 1.
+
+Let’s work through an example for bigram. We’ll first need to augment each sentence in the corpus with a special symbol `<s>` at the beginning of the sentence, to give us the bigram context of the first word. We’ll also need a special end-symbol `</s>`. The MLE n-gram parameter estimation:
+$$
+P(w_k|w_{k-1})=\frac{C(w_{k-1}w_k)}{C(w_{k-1})}
+$$
+This is a **relative frequency** of bigram and unigram counts. We said above that this use of relative frequencies as a way to estimate probabilities is an example of maximum likelihood estimation or MLE.
+
+**Log probability**
+
+We always represent and compute language model probabilities in log format as log probabilities. Since multiply enough probabilities together would result in numerical underflow.
+
+Instead of raw probabilities
+$$
+p = p_1*p_2*p_3
+$$
+by using log probabilities
+$$
+p = exp(\log{p_1}+\log{p_2}+\log{p_3})
+$$
+**Summary**
+
+What kinds of linguistic phenomena are captured in bigram statistics?
+Some of the bigram probabilities encode some facts that we think of as strictly **syntactic** in nature, like the fact that what comes after eat is usually a noun or an adjective, or that what comes after to is usually a verb.
+
+Although for pedagogical purposes we have only described bigram models, in practice it’s more common to use trigram models, which condition on the previous two words rather than the previous word, or 4-gram or even 5gram models, when there is sufficient training data.
+
+### Evaluating language models
+
+The best way to evaluate the performance of a language model is to embed it in
+an application and measure how much the application improves. Such **end-to-end** evaluation is called **extrinsic evaluation**. Extrinsic evaluation is the only way to know if a particular improvement in a component is really going to help the task at hand. Thus, for speech recognition, we can compare the performance of two language models by running the speech recognizer twice, once with each language
+model, and seeing which gives the more accurate transcription.
+
+Unfortunately, running big NLP systems end-to-end is often very expensive. Instead,
+it would be nice to have a metric that can be used to quickly evaluate potential
+improvements in a language model. An **intrinsic evaluation** metric is one that measures the quality of a model independent of any application.
+
+
+
+
+
+
+
+# Reference
+
+## Terms
+
+**Corpus** (plural corpora), a computer-readable collection of text or speech.
+
+A **utterance** is the spoken correlate of a sentence.
+
+A **lemma** is a set of lexical forms having the same stem, the same major part-of-speech, and the same word sense.
+
+**Morphology** is the study of the way words are built up from smaller meaning-bearing units called morphemes.
+
+**Morpheme** is the smallest meaningful unit in the grammar of a language. There are two broad classes of morphemes can be distinguished: stems and affixes. For example, the word cats consists of two: the morpheme cat and the morpheme -s.
+
+**Stem**, the central morpheme of the word, supplying the main meaning.
+
+**Affix**, the adding “additional” meanings of various kinds.
+
+**Wordforms**  are the different ways a word can exist in the context of a language. In English, there are many words that have the same lemma, but can be changed to be a verb, noun, adjective, or adverb by adding a suffix.
+
+**Word types** are the number of distinct words in a corpus; if the set of words in the vocabulary is V, the number of types is the word token vocabulary size |V|. When we speak about the number of words in the language, we are generally referring to word types.
+
+**Word Tokens** are the total number N of running words in a corpus.
+
+**Code switching**, It’s also quite common for speakers or writers to use multiple languages in a single communicative act, a phenomenon called code switching.
+
+**Unknow words** are words that a system has not seen before.
