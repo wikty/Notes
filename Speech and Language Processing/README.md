@@ -17,9 +17,11 @@ The definition of words in each applications is different.
 **Word types and tokens**
 
 The larger the corpora we look at, the more word types we find, and in fact this relationship between the number of types |V| and number of tokens N is called **Herdan’s Law** or **Heaps’ Law**. It is shown as following:
+
 $$
 |V| = kN^\beta \qquad \text {where} \quad 0<\beta<1
 $$
+
 **The variations of text**
 
 Any particular piece of text that we study is produced by one or more specific speakers or writers, in a specific dialect of a specific language, at a specific time, in a specific place, for a specific function.
@@ -240,26 +242,35 @@ Models that assign probabilities to sequences of words are called language model
 Let’s begin with the task of computing P(w|h), the probability of a word w given
 some history h. Suppose the history h is “its water is so transparent that” and we
 want to know the probability that the next word is the:
+
 $$
 P(\text{the}|\text{its water is so transparent that})
 $$
+
 One way to estimate this probability is from relative frequency counts in a very large corpus:
+
 $$
 P(\text{the}|\text{its water is so transparent that}) = \frac{C(\text{its water is so transparent that the})}{C(\text{its water is so transparent that})}
 $$
 
 Similarly, if we wanted to know the joint probability of an entire sequence of words like "its water is so transparent":
+
 $$
 P(\text{its water is so transparent that}) = \frac{C(\text{its water is so transparent})}{|V|^5}
 $$
+
 In general, assume the probability of the entire sequences of words as following
+
 $$
 P(w_1,w_2, \dots ,w_N)
 $$
+
 Apply the chain rule of probability, we'll get
+
 $$
 P(w_1,w_2,\dots,w_N)=P(w_1)P(w_2|w_1)P(w_3|w_2w_1) \dots P(w_N|w_{N-1} \dots w_1)
 $$
+
 Can we estimate the conditional probability P(w_k|w_{k-1} \dots w_1) from relative frequency counts in a corpus?
 
 No. We can’t just estimate by counting the number of times every word occurs following every long string, because language is creative and any particular context might have never occurred before!
@@ -275,17 +286,23 @@ An n-gram is a sequence of N words: a 2-gram (or bigram) is a two-word sequence 
 The intuition of the n-gram model is that instead of computing the probability of a word given its entire history, we can approximate the history by just the last few words.
 
 The assumption in the n-gram model is
+
 $$
 P(w_k|w_{k-1} \dots w_1) = P(w_k|w_{k-1} \dots w_{k-n+1}) \qquad \text{where} \; n \; \text{is the n of n-gram}
 $$
+
 With this assumption, the probability of the sentence is
+
 $$
 P(w_1,w_2, \dots ,w_N)=\prod_{k}^{N} P(w_k|w_{k-1} \dots w_{k-n+1})
 $$
+
 For example, the **bigram model**, approximates the probability of a word given all the previous words by using only the conditional probability of the preceding word.
+
 $$
 P(\text{the}|\text{its water is so transparent that})=P(\text{the}|\text{that})
 $$
+
 The assumption that the probability of a word depends only on the previous word is called a **Markov assumption**. Markov models are the class of probabilistic models that assume we can predict the probability of some future unit without looking too far into the past.
 
 **Estimate models**
@@ -293,9 +310,11 @@ The assumption that the probability of a word depends only on the previous word 
 How do we estimate these bigram or n-gram probabilities? An intuitive way to estimate probabilities is called maximum likelihood estimation or MLE. We get the MLE estimate for the parameters of an n-gram model by getting counts from a corpus, and normalizing the counts so that they lie between 0 and 1.
 
 Let’s work through an example for bigram. We’ll first need to augment each sentence in the corpus with a special symbol `<s>` at the beginning of the sentence, to give us the bigram context of the first word. We’ll also need a special end-symbol `</s>`. The MLE n-gram parameter estimation:
+
 $$
 P(w_k|w_{k-1})=\frac{C(w_{k-1}w_k)}{C(w_{k-1})}
 $$
+
 This is a **relative frequency** of bigram and unigram counts. We said above that this use of relative frequencies as a way to estimate probabilities is an example of maximum likelihood estimation or MLE.
 
 **Log probability**
@@ -303,13 +322,17 @@ This is a **relative frequency** of bigram and unigram counts. We said above tha
 We always represent and compute language model probabilities in log format as log probabilities. Since multiply enough probabilities together would result in numerical underflow.
 
 Instead of raw probabilities
+
 $$
 p = p_1*p_2*p_3
 $$
+
 by using log probabilities
+
 $$
 p = exp(\log{p_1}+\log{p_2}+\log{p_3})
 $$
+
 **Summary**
 
 What kinds of linguistic phenomena are captured in bigram statistics?
