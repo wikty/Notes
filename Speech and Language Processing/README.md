@@ -342,13 +342,153 @@ Although for pedagogical purposes we have only described bigram models, in pract
 
 ### Evaluating language models
 
-The best way to evaluate the performance of a language model is to embed it in
-an application and measure how much the application improves. Such **end-to-end** evaluation is called **extrinsic evaluation**. Extrinsic evaluation is the only way to know if a particular improvement in a component is really going to help the task at hand. Thus, for speech recognition, we can compare the performance of two language models by running the speech recognizer twice, once with each language
-model, and seeing which gives the more accurate transcription.
+**The way of evaluation**
 
-Unfortunately, running big NLP systems end-to-end is often very expensive. Instead,
-it would be nice to have a metric that can be used to quickly evaluate potential
-improvements in a language model. An **intrinsic evaluation** metric is one that measures the quality of a model independent of any application.
+* *extrinsic evaluation*
+
+  The best way to evaluate the performance of a language model is to embed it in
+  an application and measure how much the application improves. Such **end-to-end** evaluation is called **extrinsic evaluation**. Extrinsic evaluation is the only way to know if a particular improvement in a component is really going to help the task at hand. Thus, for speech recognition, we can compare the performance of two language models by running the speech recognizer twice, once with each language
+  model, and seeing which gives the more accurate transcription.
+
+* *intrinsic evaluation*
+
+  Unfortunately, sometime running big application systems end-to-end is often very expensive. Instead,
+  it would be nice to have a metric that can be used to quickly evaluate potential improvements in a model independent of any application. Such metric is called **intrinsic evaluation**.
+
+An intrinsic improvement does not guarantee an extrinsic improvement in the performance of a real application like speech recognition or machine translation. Nonetheless, because intrinsic evaluation often correlates with such improvements, it is commonly used as a quick check on an algorithm. But a model’s improvement should always be confirmed by an end-to-end evaluation of a real task before concluding the evaluation of the model.
+
+**The data set for evaluation**
+
+For an intrinsic evaluation of a model we need a test set.  As with many of the statistical models in our field, the probabilities of an n-gram model is trained on, the **training set** or training corpus. We can then measure the quality of an n-gram model by its performance on some unseen data called the **test set** or test corpus. We will also sometimes call test sets and other datasets that are not in our training sets **held out set** because we hold them out from the training data.
+
+Sometimes we use a particular test set so often that we implicitly tune to its characteristics. We then need a fresh test set that is truly unseen. In such cases, we call the initial test set the **validation set** or development set. And the final test set to evaluate models performance is called **test set**. In practice, we often just divide our data into 80% training, 10% validation, and 10% test.
+
+**How to compare model**
+
+If we are given a corpus of text and want to compare two different n-gram models, we divide the data into training and test sets, train the parameters of both models on the training set, and then compare how well the two trained models fit the test set.
+
+Given two probabilistic models, the better model is the one that has a tighter fit to the test data or that better predicts the details of the test data, and hence will assign a higher probability to the test data.
+
+Since our evaluation metric is based on test set probability, it’s important not to let the test sentences into the training set.
+
+**The metric of evaluation language models**
+
+In practice we don’t use raw probability as our metric for evaluating language models, but a variant called **perplexity**.
+
+If our language model is bigram, and the perplexity for a test set $W=w_1,w_2,\dots,w_N$ is
+
+
+
+$$
+\begin{equation}
+\begin{split}
+\text{perplexity}(W) & = \sqrt[\leftroot{-3}\uproot{3}N]{\frac{1}{P(w_1,w_2,\dots,w_N)}} \\
+ & = \sqrt[\leftroot{-3}\uproot{3}N]{\frac{1}{\prod_{k}^{N}{P(w_k|w_{k-1})}}}
+\end{split}
+\end{equation}
+$$
+
+
+
+The $W$ is the the entire sequence of words in the test set. Since this sequence will cross many sentence
+boundaries, we need to include the begin- and end-sentence markers `<s>` and `</s>` in the probability computation.
+
+The higher the probability of the word sequence, the lower the perplexity. Thus, minimizing perplexity is equivalent to maximizing the test set probability according to the language model.
+
+How to explain perplexity?
+
+Perplexity is the **weighted average branching factor** of a language. The **branching factor** of a language is the number of possible next words that can follow any word, it is equal to the size of vocab. And  the perplexity considers the probability of each word to calculate the number of possible next words.
+
+## Sampling language models
+
+**Sample unigram**
+
+Imagine all the words of the English language covering the probability space between 0 and 1, each word covering an interval proportional to its frequency. We
+choose a random value between 0 and 1 and print the word whose interval includes
+this chosen value. We continue choosing random numbers and generating words
+until we randomly generate the sentence-final token `</s>`.
+
+**Sample bigram**
+
+We first generate a random bigram that starts with `<s>` (according to its bigram probability). Let's say that bigram is `(<s>, w)`.  We next chose a random bigram starting with `w` (again, drawn according to its
+bigram probability), and so on, until we sample a bigram end with `<\s>`.
+
+**Visualize models on different training sets **
+
+Sentences generated from unigram, bigram, trigram, and 4-gram models trained on Shakespeare’s works.
+
+![](ngram-shakespeare-sampling.jpg)
+
+Sentences generated by unigram, bigram, and trigram grammars trained on Wall Street Journal corpus.
+
+![](ngram-wsj-sampling.jpg)
+
+Compare Wall Street Journal examples to the Shakespeare examples. While they both
+model “English-like sentences”, there is clearly no overlap in generated sentences,
+and little overlap even in small phrases. Statistical models are likely to be pretty useless
+as predictors if the training sets and the test sets are as different as Shakespeare
+and WSJ.
+
+We must be sure to use a training corpus that has a similar **genre** to whatever task we are
+trying to accomplish. To build a language model for translating legal documents,
+we need a training corpus of legal documents. To build a language model for a
+question-answering system, we need a training corpus of questions. It is equally important to get training data in the appropriate **dialect**, especially when processing social media posts or spoken transcripts.
+
+## The problems with n-gram models
+
+* unknown words
+
+  Unknown words are the words we simply have never seen before.
+
+* zero counts
+
+  For any n-gram that occurred a sufficient number of times, we might have a good estimate of its probability. But because any corpus is limited, some perfectly acceptable English word sequences are bound to be missing from it. That is, we’ll have many cases of putative “zero probability n-grams” that should really have some non-zero probability.
+
+### Unknown words
+
+Unknown words are the words we have never seen in our training set. How can we build models on the  unknown words?
+
+**Closed vocabulary**
+
+Sometimes we have a language task in which we know all the words that can occur. In such a **closed vocabulary** system the test set can only contain words from this lexicon, and there will be no unknown words. This is a reasonable assumption in some domains, such as speech recognition or machine translation, where we have a pronunciation dictionary or a phrase table that are fixed in advance, and so the language model can only use the words in that dictionary or phrase table.
+
+**Open vocabulary**
+
+In other cases we have to deal with words we haven’t seen before, which we’ll call **unknown words**, or **out of vocabulary** (**OOV**) words. An open vocabulary system is one in which we model these potential unknown words in the test set by adding a pseudo-word called `<UNK>`.
+
+**How to train models with unknown word**
+
+There are two common ways to train models with unknown word `<UNK>`
+
+1. The first one is to turn the problem back into a closed vocabulary one by choosing a fixed vocabulary in advance. We should choose a vocabulary in advance. Convert any words not in the vocabulary to `<UNK>` in a text normalization step. Estimate the probabilities for `<UNK>` from its counts just like any other regular word.
+2. The second alternative, in situations where we don’t have a prior vocabulary in advance, is to replace some rare words by `<UNK>`. For example we can replace by `<UNK>` all words that occur fewer than n times in the training set, where n is some small number, or equivalently select a vocabulary size V in advance (say 50,000) and choose the top V words by frequency and replace the rest by `<UNK>`.
+
+The exact choice of `<UNK>` model does have an effect on metrics like perplexity. language model can achieve low perplexity by choosing a small vocabulary and
+assigning the unknown word a high probability. For this reason, perplexities should
+only be compared across language models with the same vocabularies.
+
+### Zero counts
+
+What do we do with words that are in our vocabulary (they are not unknown words)
+but appear in a test set in an unseen context (for example they appear after a word
+they never appeared after in training)? To keep a language model from assigning
+zero probability to these unseen events, we’ll have to shave off a bit of probability
+mass from some more frequent events and give it to the events we’ve never seen. This modification is called **smoothing** or **discounting**.
+
+#### add-1 smoothing
+
+
+
+#### add-k smoothing
+
+
+
+#### stupid backoff
+
+
+
+#### Kneser-Ney smoothing
+
 
 
 
