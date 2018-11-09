@@ -239,10 +239,9 @@ starting with the phrase *There are* will be much more probable than one startin
 
 Models that assign probabilities to sequences of words are called language models.
 
-Let’s begin with the task of computing P(w|h), the probability of a word w given
+Let’s begin with the task of computing $P(w|h)$, the probability of a word w given
 some history h. Suppose the history h is “its water is so transparent that” and we
 want to know the probability that the next word is the:
-
 $$
 P(\text{the}|\text{its water is so transparent that})
 $$
@@ -271,7 +270,7 @@ $$
 P(w_1,w_2,\dots,w_N)=P(w_1)P(w_2|w_1)P(w_3|w_2w_1) \dots P(w_N|w_{N-1} \dots w_1)
 $$
 
-Can we estimate the conditional probability P(w_k|w_{k-1} \dots w_1) from relative frequency counts in a corpus?
+Can we estimate the conditional probability $P(w_k|w_{k-1} \dots w_1)$ from relative frequency counts in a corpus?
 
 No. We can’t just estimate by counting the number of times every word occurs following every long string, because language is creative and any particular context might have never occurred before!
 
@@ -369,7 +368,7 @@ If we are given a corpus of text and want to compare two different n-gram models
 
 Given two probabilistic models, the better model is the one that has a tighter fit to the test data or that better predicts the details of the test data, and hence will assign a higher probability to the test data.
 
-Since our evaluation metric is based on test set probability, it’s important not to let the test sentences into the training set.
+Note: Since our evaluation metric is based on test set probability, it’s important not to let the test sentences into the training set.
 
 **The metric of evaluation language models**
 
@@ -395,9 +394,99 @@ boundaries, we need to include the begin- and end-sentence markers `<s>` and `</
 
 The higher the probability of the word sequence, the lower the perplexity. Thus, minimizing perplexity is equivalent to maximizing the test set probability according to the language model.
 
-How to explain perplexity?
+**How to explain perplexity?**
 
 Perplexity is the **weighted average branching factor** of a language. The **branching factor** of a language is the number of possible next words that can follow any word, it is equal to the size of vocab. And  the perplexity considers the probability of each word to calculate the number of possible next words.
+
+**Perplexity’s relation to entropy**
+
+The perplexity measure actually arises from the information-theoretic concept of cross-entropy. **Entropy** is a measure of information.
+
+The entropy of **a single random variable**:
+
+
+$$
+H(X)=-\sum_{x \in S}P(x)\log{P(x)} \qquad \text{where} \; S \; \text{is the state space for} \; x
+$$
+
+
+The entropy of **a sequence** of random variables:
+
+
+$$
+H(w_1,w_2,\dots,w_n)=-\sum_{W_1^n \in L}P(W_1^n)\log{P(W_1^n)} \qquad \text{where} \; L \; \text{is the state space for} \; W_1^n
+$$
+
+
+The entropy of **a language**:
+
+We could define the **entropy rate** or **per-word entropy** as the entropy of this sequence divided by the number of words. How can we measure the true per-word entropy of a language? We need to consider sequences of infinite length. If we think of **a language as a stochastic process** $L$ that produces a sequence of words, and allow $W_1^n$ to represent the sequence of words, then we have entropy of a language:
+
+
+$$
+H(L)= - \lim_{n \to \infty} \frac{1}{n} \sum_{W_1^n \in L}P(W_1^n)\log{P(W_1^n)}
+$$
+
+
+The Shannon-McMillan-Breiman theorem states that if the language is both stationary and ergodic then:
+
+
+$$
+H(L)= - \lim_{n \to \infty} \frac{1}{n} \log{P(W_1^n)}
+$$
+
+
+That is, we can take a single sequence that is long enough instead of summing over all possible sequences.
+
+A **stochastic process** is said to be **stationary** if the probabilities it assigns to a sequence are invariant with respect to shifts in the time index. In other words, the probability distribution for words at time t is the same as the probability distribution at time t +1.
+
+For example:
+
+* Markov models, and hence n-grams, are stationary.
+* Natural language is not stationary, because the probability of upcoming words can be dependent on events that were arbitrarily distant and time dependent.
+
+Thus, we should know our n-grams statistical language models only give an approximation to the correct distributions and entropies of natural language. by making some incorrect but convenient simplifying assumptions, we can compute the entropy of some stochastic process by taking a very long sample of the output and computing its average log probability, so the approximation entropy of language is:
+
+
+$$
+H(L) \approx \frac{-{\log P(w_1,w_2,\dots,w_N)}}{N} \qquad \text{where} \; w_1,w_2,\dots,w_N \; \text{is the sampling sequence}
+$$
+
+
+How can we measure the error due to using the n-gram models to estimate the entropy of the true probability distribution for natural language? Let's introduce a information theoretic tool **cross entropy** to measure the difference between two distributions:
+
+
+$$
+H(Q,P)=- \sum_{x}Q(x) \log{P(x)} \\
+H(Q,P)=- \sum_{W_1^n \in L}Q(w_1,w_2,\dots,w_n) \log{P(w_1,w_2,\dots,w_n)}
+$$
+
+
+Assume the $Q$ is the unknown true natural language model and the $P$ is our approximation n-gram models. Because cross entropy is the upper bound on the entropy:
+
+
+$$
+H(Q) \leq H(Q,P)
+$$
+
+
+The more accurate $P$ is, the closer the cross-entropy $H(Q, P)$ will be to the true entropy $H(Q)$. Thus, the difference between them is a measure of how accurate a model $P$ is. Between two models $P_1$ and $P_2$, the more accurate model will be the one with the lower cross-entropy. And If we have a accurate model $P$, then we can use cross entropy $H(Q, P)$ to estimate the entropy $H(Q)$ that is true natural language entropy in here.
+
+Again, following the Shannon-McMillan-Breiman theorem, for a stationary ergodic process:
+
+
+$$
+\begin{equation}
+\begin{split}
+H(Q,P) & = - \lim_{n \to \infty } \frac{1}{n} \log{P(w_1,w_2,\dots,w_n)} \\
+       & \approx - \frac {1}{N}  \log{P(w_1,w_2,\dots,w_n)} \\
+       & = \log(\sqrt[\leftroot{-3}\uproot{3}N]{\frac{1}{P(w_1,w_2,\dots,w_N)}})
+\end{split}
+\end{equation}
+$$
+
+
+We can see that the perplexity of a model $P$ on a sequence of words $W$ is now formally defined as the $\exp$ of $H(Q, P)$ cross-entropy.
 
 ## Sampling language models
 
@@ -436,6 +525,16 @@ question-answering system, we need a training corpus of questions. It is equally
 
 ## The problems with n-gram models
 
+In many language-related tasks, it would be extremely useful to know the
+probability that a sentence or word sequence will occur in a document. However,
+there is not enough data to account for all word sequences. Thus, n-gram
+models are used to approximate the probability of word sequences. Making an
+independence assumption between the n-grams reduces some of the problems
+with **data sparsity**, but even n-gram models can have sparsity problems. For
+example, the Google corpus has 1 trillion words of running English text. There
+are 13 million words that occur over 200 times, so there are at least 169 trillion
+potential bigrams - much more than the 1 trillion words in the corpus.
+
 * unknown words
 
   Unknown words are the words we simply have never seen before.
@@ -473,23 +572,399 @@ What do we do with words that are in our vocabulary (they are not unknown words)
 but appear in a test set in an unseen context (for example they appear after a word
 they never appeared after in training)? To keep a language model from assigning
 zero probability to these unseen events, we’ll have to shave off a bit of probability
-mass from some more frequent events and give it to the events we’ve never seen. This modification is called **smoothing** or **discounting**.
+mass from some more frequent events and give it to the events we’ve never seen. This modification is called **smoothing** or **discounting**. Smoothing is a strategy used to account for **data sparsity**.
 
-#### add-1 smoothing
+#### Add-1 smoothing
+
+The simplest way to do smoothing is to add one to all the counts, before
+we normalize them into probabilities. This algorithm is called **Laplace smoothing** or add-1 smoothing. Laplace smoothing does not perform well enough to be used in modern **n-gram models**, but it usefully introduces many of the concepts that we see in other smoothing algorithms, gives a useful baseline, and is also a practical
+smoothing algorithm for other tasks like **text classification**.
+
+**smoothed unigram**
+
+The unsmoothed maximum likelihood estimate of the unigram probability is
+
+
+$$
+P(w_i) = \frac{C(w_i)}{N} \qquad \text{where} \;N\; \text{is the number of word tokens in corpus}
+$$
 
 
 
-#### add-k smoothing
+
+The smoothed maximum likelihood estimate of the unigram probability is
 
 
+$$
+P_{\text{Laplace}}(w_i) = \frac{C(w_i)+1}{N+V} \qquad \text{where} \;V\; \text{is the number of word types in corpus, i.e., the size of vocab}
+$$
 
-#### stupid backoff
+
+**smoothed bigram**
+
+The unsmoothed maximum likelihood estimate of the bigram probability is
 
 
+$$
+P(w_i|w_{i-1}) = \frac{C(w_{i-1},w_i)}{C(w_{i-1})}
+$$
+
+
+The smoothed maximum likelihood estimate of the bigram probability is
+
+
+$$
+P(w_i|w_{i-1}) = \frac{C(w_{i-1},w_i)+1}{C(w_{i-1})+V}
+$$
+
+
+**smoothed trigram**
+
+The smoothed maximum likelihood estimate of the trigram probability is
+
+
+$$
+P(w_i|w_{i-2},w_{i-1}) = \frac{C(w_{i-2},w_{i-1},w_i)+1}{C(w_{i-1},w_{i-2})+V}
+$$
+
+
+**discounting**
+
+A related way to view smoothing is as discounting some non-zero counts in order to get the probability mass that will be assigned to the zero counts. 
+
+For example, in the unigram estimation, instead of changing both the numerator and denominator, it is convenient to describe how a smoothing algorithm affects the numerator, by defining an **adjusted counts** or **discounted counts**
+
+
+$$
+C^*(w_i) = (C(w_i)+1)*\frac{N}{N+V}
+$$
+
+
+And the smoothed laplace estimation can be represented as following
+
+
+$$
+P_{\text{Laplace}}(w_i)=\frac{C^*(w_i)}{N}
+$$
+
+
+Now we can describe a smoothing algorithm by the ratio of the discounted counts to the original counts
+
+
+$$
+d_c = \frac{C*}{C}
+$$
+
+
+**the problem with add-1 smoothing**
+
+Because the size of vocab is so large in corpus. There are too many probability mass be moved from the seen to the unseen events
+
+#### Add-k smoothing
+
+One alternative to add-one smoothing is to move a bit less of the probability mass from the seen to the unseen events. Instead of adding 1 to each count, we add a factional count. This is called **add-k smoothing**.
+
+For example, the add-k smoothed maximum likelihood estimate of the unigram probability is
+
+
+$$
+P_{\text{Laplace}}(w_i) = \frac{C(w_i)+k}{N+k*V} \qquad \text{where}\;0<k<1
+$$
+
+**how to choose the hyperparameter k?**
+
+We can choose the hyperparameter k by optimizing on a validation set.
+
+**the problem with add-k smoothing**
+
+Although add-k is useful for some tasks (including **text classification**), it turns out that it still doesn’t work well for **language modeling**, generating counts with poor variances and often inappropriate discounts
+
+#### Backoff and Interpolation
+
+Let's start discuss the zero counts problem. For example, If we are trying to compute $P(w_i|w_{i-2},w_{i-1})$ but we have no examples of a particular trigram $w_{i-2},w_{i-1},w_{i}$, so we will assign zero probability to it. Is it reasonable to give zero probability mass to the events we never seen before? Obviously, it's totally wrong. Remember that everything is possible.
+
+The discounting or smoothing methods we have been discussing so far can solve this problem by giving 1 or k counts to the events we never seen before. In this section, we'll use a new method to solve the zero counts problem.
+
+If we have no examples of trigram $w_{i-2},w_{i-1},w_{i}$, we can instead estimate its probability by using the bigram $P(w_i|w_{i-1})$, Similarly, if we don’t have counts to compute $P(w_i|w_{i-1})$, we can look back to the unigram $P(w_i)$. In other words, sometimes using **less context** is a good thing, helping to generalize more for contexts that the model hasn’t learned much about. 
+
+There are two ways to use this n-gram hierarchy: **backoff** and **interpolationn**.
+
+**Backoff**
+
+In a backoff n-gram model, if the n-gram we need has zero counts, we approximate it by backing off to the (N-1)-gram. We continue backing off until we reach a history that has some counts.
+
+**normalization**
+
+In order for a backoff model to give a correct probability distribution, we have to discount the higher-order n-grams to save some probability mass for the lower order n-grams.
+
+For example, If $w_{i-2},w_{i-1},w_{i}$ is zero count, we can instead estimate its probability by backoff to the lower-order non-zero n-gram. The probability mass of $w_{i-2},w_{i-1},w_{i}$ has bee increased from zero to the non-zero lower-order n-gram. So we must discount the probability mass of other non-zero higher-order n-grams to make sure the distribution is valid.
+
+This normalized backoff is called **Katz backoff**, showing as following:
+
+
+$$
+\begin{equation}
+P_{\text{backoff}}(w_i|w_{i-N+1}^{i-1}) = 
+  \begin{cases}
+    P^*(w_i|w_{i-N+1}^{i-1}), & \text{if} \; C(w_{i-N+1}^{i})>0 \\
+    \alpha(w_{i-N+1}^{i-1})P_{\text{backoff}}(w_i|w_{i-N+2}^{i-1}), & \text{otherwise}
+  \end{cases}
+\end{equation}
+$$
+
+
+where the $P^*(w_i|w_{i-N+1}^{i-1})$ is the discounted probability distribution for the higher-order n-grams; the $\alpha(w_{i-N+1}^{i-1})$ is a function to distribute the discounted probability mass to the lower-order n-grams.
+
+Katz backoff is often combined with a smoothing method called **Good-Turing**.
+
+**Iterpolation**
+
+In interpolation, we always mix the probability estimates from all the n-gram estimators, weighing and combining the different order n-grams counts.
+
+**simple linear interpolation**
+
+We combine different order n-grams by linearly interpolating all the models with fixed weights.
+
+
+$$
+\begin{equation}
+\begin{split}
+P(w_i|w_{i-2},w_{i-1}) & = \lambda_1 * P(w_i|w_{i-2},w_{i-1}) \\
+ 					   & + \lambda_2 * P(w_i|w_{i-1}) \\
+ 					   & + \lambda_3 * P(w_i) \\
+\text{where} \; \sum_{i=1}^{3}\lambda_i = 1
+\end{split}
+\end{equation}
+$$
+
+
+**context related linear interpolation**
+
+We combine different order n-grams by linearly interpolating all the models with context related weights.
+
+
+$$
+\begin{equation}
+\begin{split}
+P(w_i|w_{i-2},w_{i-1}) & = \lambda_1(w_{i-2}^{i-1}) * P(w_i|w_{i-2},w_{i-1}) \\
+ 					   & + \lambda_2(w_{i-2}^{i-1}) * P(w_i|w_{i-1}) \\
+ 					   & + \lambda_3(w_{i-2}^{i-1}) * P(w_i) \\
+\text{where} \; \sum_{i=1}^{3}\lambda_i = 1
+\end{split}
+\end{equation}
+$$
+
+
+**normalization**
+
+The low order n-gram is a probability distribution and the weights are sum to 1, so the linearly interpolating high order n-gram is a probability.
+
+**the hyperparameter lambdas**
+
+Both the simple interpolation and conditional context related interpolation lambdas are learned from a **held-out** corpus, by choosing the $\lambda$ values that maximize the likelihood of the held-out corpus. There are various ways to find this optimal set of lambdas, one way is to use the **EM** algorithm.
 
 #### Kneser-Ney smoothing
 
+One of the most commonly used and best performing n-gram smoothing methods is the interpolated Kneser-Ney algorithm.
 
+**absolute discounting**
+
+Kneser-Ney has its roots in a method called absolute discounting. **Absolute discounting** is smoothing way by subtracting a fixed (absolute) discount value from each count.
+
+Let's start to figure out a phenomenon. Assume we have a training corpus  and a held-out corpus. First we get all of n-grams if its count is $n$, then we want to know $m$ that is the average count of those n-grams occur in held-out corpus.
+
+![](bigrams-heldout-counts.jpg)
+
+We can find that except for $n=0$ or $n=1$, the difference between $n$ and $m$ is about 0.75, so we can discount $n$ by subtracting a fixed value.
+
+**absolute discounting with interpolation**
+
+The estimate probability of bigram:
+
+
+$$
+P(w_i|w_{i-1})=\frac{C(w_{i-1},w_{i})-d}{C(w_{i-1})}+\lambda(w_{i-1})P(w_{i})
+$$
+
+
+where the $d$ is the value of absolute discounting; the $\lambda(w_{i-1})$ is the weight for interpolation.
+
+**Kneser-Ney discounting with interpolation**
+
+Kneser-Ney discounting augments absolute discounting with a more sophisticated way to handle the lower-order n-grams distribution.
+
+The estimate probability of bigram:
+
+
+$$
+P(w_i|w_{i-1})=\frac{\max(C(w_{i-1},w_{i})-d,0)}{C(w_{i-1})}+\lambda(w_{i-1})P_{\text{continuation}}(w_{i})
+$$
+
+
+The main difference with the naive absolute discounting is the $P_{\text{continuation}}(w_{i})$ unigram model. 
+
+Let's first look the disadvantages of $P(w_i)$ unigram model. When we interpolate with the lower-order unigram, the question we want to answer is "How likely is $w_i$ to follow the previous context word $w_{i-1}$ ?", but the model $P(w_i)$ answers another question "How likely is $w_i$ ?". The Kneser-Ney intuition is to base our estimate of $P_{\text{continuation}}$ on the number of different contexts word $w_i$ has appeared in, that is, the number of bigram types it completes. We can estimate the probability of seeing the word $w$ as a novel continuation by the following:
+
+
+$$
+P_{\text{continuation}}(w_i) \propto |\{1:C(v,w_i)>0\}|
+$$
+
+
+The normalization distribution by the total number of word bigram types:
+
+
+$$
+P_{\text{continuation}}(w_i) = \frac{|\{1:C(v,w_i)>0\}|}{|\{1:C(v^{'},w^{'})>0\}|}
+$$
+
+
+How can we choose the interpolation weight?
+
+The $\lambda(w_{i-1})$ is a normalizing constant that is used to distribute the probability mass that we've discounted:
+
+
+$$
+\lambda(w_{i-1})=\frac{d}{C(w_{i-1})}*|\{1:C(w_{i-1},v)\}|
+$$
+
+
+The best-performing version of Kneser-Ney smoothing is called **modified Kneser-Ney smoothing**, and is due to Chen and Goodman (1998).
+
+#### Smoothing for the extremely large language models
+
+By using text from the web, it is possible to build extremely large language models. 
+
+Efficiency considerations are important when building language models that use
+very large sets of n-grams. Rather than store each word as a string, it is generally
+represented in memory as a 64-bit hash number, with the words themselves stored
+on disk. 
+
+Probabilities are generally quantized using only 4-8 bits (instead of 8-byte
+floats), and n-grams are stored in reverse tries. 
+
+N-grams can also be shrunk by pruning, for example only storing n-grams with counts greater than some threshold or using entropy to prune less-important n-grams
+
+Another option is to build approximate language models using techniques like **Bloom filters**.
+
+Although with these toolkits it is possible to build web-scale language models
+using full Kneser-Ney smoothing, there is a much simpler algorithm may be sufficient. The algorithm is called **stupid backoff**.
+
+Stupid backoff gives up the idea of trying to make the language
+model a true probability distribution. There is no discounting of the higher-order
+probabilities. If a higher-order n-gram has a zero count, we simply backoff to a
+lower order n-gram, weighed by a fixed (context-independent) weight.
+
+
+$$
+\begin{equation}
+\text{Score}_(w_i|w_{i-N+1}^{i-1}) = 
+  \begin{cases}
+  	\frac{C(w_{i-N+1}^{i})}{C(w_{i-N+1}^{i-1})}, & \text{if} \; C(w_{i-N+1}^{i})>0 \\
+    \lambda \text{Score}(w_i|w_{i-N+2}^{i-1}), & \text{otherwise}
+  \end{cases}
+\end{equation}
+$$
+
+
+#### Others smoothing
+
+**Good-Truing smoothing**
+
+For simplicity, we'll choose unigram as example here but Good-turing smoothing is suitable for any n-gram models.
+
+Suppose we have the set of all possible **word types**: $X=\{x_1,x_2,\dots,x_V\}$. We also have a corpus $W=w_1,w_2,\dots,w_N$ with the number of N running **word tokens**. 
+
+We want to estimate the probability  $P(x_i)$ of a work type $x_i$, because of data sparsity we cannot use the relative frequency to estimate the probability. Here we run into a problem: how can we estimate the probability of something we have never seen before?
+
+Now we introduce an assumption a key idea in Good-Turing: if $C(x_i)=C(x_j)$ then $P(x_i)=P(x_j)$.  In other words, if two word types appear the same number of times in the corpus, we assume that they have the same probability of occurring in general.
+
+With this assumption, we introduce the notation $\theta(r)$ to estimate the probability of a word type occurring given that it appeared $r$ times in $W$ corpus. We also let $N_r$ denote the number of word types that occur exactly $r$ times in $W$.
+
+It's easy to get the following:
+
+
+$$
+N = \sum_{r=0}^{\infty}rN_r
+$$
+
+
+The unsmoothed estimate:
+
+
+$$
+\theta(r)=\frac{r}{N}
+$$
+
+
+The Good-Turing estimate:
+
+
+$$
+\theta^*(r) = \frac{r^*}{N} \\
+\text{where} \; r^* = (r+1)\frac{N_{r+1}}{N_{r}}
+$$
+
+
+where $r^*$ is the discounted count; the $N_{r+1} < N_{r}$ in general by **Zipf law**. This is a correct probability distribution, i.e., where $\sum_{r}\theta^*(r)=1$.
+
+**Katz** improves the Good-Truing smoothing by setting a threshold $K$ for discounting:
+
+
+$$
+\begin{equation}
+r^*=
+  \begin{cases}
+  	\frac{(r+1)\frac{N_{r+1}}{N_r}-r\frac{(K+1)N_{K+1}}{N_1}}{1-\frac{(K+1)N_{K+1}}{N_1}}, & r<K \\
+    r, & otherwise
+  \end{cases}
+\end{equation}
+$$
+
+
+## Summary
+
+* Language models offer a way to assign a probability to a sentence or other sequence of words, and to predict a word from preceding words.
+* n-grams are Markov models that estimate words from a fixed window of previous words. n-gram probabilities can be estimated by counting in a corpus and normalizing (the maximum likelihood estimate).
+* n-gram language models are evaluated extrinsically in some task, or intrinsically using perplexity.
+* The perplexity of a test set according to a language model is the geometric mean of the inverse test set probability computed by the model.
+* Smoothing algorithms provide a more sophisticated way to estimate the probability of n-grams. Commonly used smoothing algorithms for n-grams rely on lower-order n-gram counts through backoff or interpolation.
+* Both backoff and interpolation require discounting to create a probability distribution.
+* Kneser-Ney smoothing makes use of the probability of a word being a novel continuation. The interpolated Kneser-Ney smoothing algorithm mixes a discounted probability with a lower-order continuation probability.
+
+Starting in the late 1990s, Chen and Goodman produced a highly influential
+series of papers with a comparison of different language models (Chen and Goodman
+1996, Chen and Goodman 1998, Chen and Goodman 1999, Goodman 2006).
+They performed a number of carefully controlled experiments comparing different
+discounting algorithms, cache models, class-based models, and other language
+model parameters. They showed the advantages of **Modified Interpolated Kneser-
+Ney**, which has since become the standard baseline for language modeling, especially
+because they showed that caches and class-based models provided only minor
+additional improvement. These papers are recommended for any reader with further
+interest in language modeling.
+
+Two commonly used toolkits for building language models are **SRILM** (Stolcke,
+2002) and **KenLM** (Heafield 2011, Heafield et al. 2013). Both are publicly available.
+SRILM offers a wider range of options and types of discounting, while KenLM is
+optimized for speed and memory size, making it possible to build web-scale language
+models.
+
+The highest accuracy language models at the time of this writing make use of **neural nets**. The problem with standard language models is that the number of parameters
+increases exponentially as the n-gram order increases, and n-grams have no
+way to generalize from training to test set. Neural networks instead project words
+into a continuous space in which words with similar contexts have similar representations.
+Both feedforward nets Bengio et al. 2006, Schwenk 2007 and recurrent
+nets (Mikolov, 2012) are used.
+
+Other important classes of language models are **maximum entropy** language models (Rosenfeld, 1996), based on logistic regression classifiers that use lots of
+features to help predict upcoming words.
+
+Another important technique is language model **adaptation**, where we want to
+combine data from multiple domains (for example we might have less in-domain
+training data but more general data that we then need to adapt) (Bulyko et al. 2003,
+Bacchiani et al. 2004, Bellegarda 2004, Bacchiani et al. 2006, Hsu 2007, Liu et al. 2013).
+
+# Chapter 4
 
 
 
