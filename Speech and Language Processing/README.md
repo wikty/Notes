@@ -1,6 +1,6 @@
 [TOC]
 
-# Chapter 2
+# Chapter 2 - Preprocess
 
 ## Words
 
@@ -221,7 +221,7 @@ minimum edit distance. Instead of computing the “minimum edit distance” betw
 two strings, Viterbi computes the “maximum probability alignment” of one string
 with another.
 
-# Chapter 3
+# Chapter 3 - N-gram Language Models
 
 ## N-gram Language Models
 
@@ -964,9 +964,41 @@ combine data from multiple domains (for example we might have less in-domain
 training data but more general data that we then need to adapt) (Bulyko et al. 2003,
 Bacchiani et al. 2004, Bellegarda 2004, Bacchiani et al. 2006, Hsu 2007, Liu et al. 2013).
 
-# Chapter 4
+# Chapter 4 - Sentiment Analysis
 
+## Text Classification
 
+### Some text classification tasks
+
+**Text classification** is the task of assigning a label or category to an entire text or document. There are some common text categorization tasks:
+
+* **Sentiment analysis** is a task of text classification to extract the positive or negative sentiment orientation that a writer expresses toward some object. For example, a review of a movie, book, or product on the web expresses the author’s sentiment toward the product. Extracting consumer or public sentiment is relevant for fields from marketing to politics. The simplest version of sentiment analysis is a binary classification task, and the words of the review provide excellent cues.
+
+* **Spam detection** is another important commercial application, the binary classification task of assigning an email to one of the two classes spam or not-spam. Many lexical and other features can be used to perform this classification.
+
+* The task of **language id** is to identify which language is be used to write the text or document. Texts on social media, for example, can be in any number of languages and we’ll need to apply different processing. The task of language id is thus the first step in most language processing pipelines.
+
+* Tasks like determining a text’s authorship attribution, or **author characteristics** like gender, age, and native language are text classification tasks.
+
+* One of the oldest tasks in text classification is assigning a library subject category or **topic label** to a text.
+
+* Classification is essential for tasks below the level of the document as well. For example, **period disambiguation** (deciding if a period is the end of a sentence or part of a word), **word tokenization** (deciding if a character should be a word boundary), and **language modeling** (classifying the context-so-far into a class for each next word.) are all can be viewed as classification task.
+
+### The method for classifying
+
+The goal of classification is to take a single observation, extract some useful features, and thereby classify the observation into one of a set of discrete classes. Most cases of classification in language processing are  done via **supervised learning**. The goal of the algorithm is to learn a classifier that is capable of mapping from a new document or text to its correct class. 
+
+A **probabilistic classifier** additionally will tell us the probability of the observation being in the class. This full distribution over the classes can be useful information for **downstream decisions**; avoiding making discrete decisions early on can be useful when **combining systems**.
+
+Many kinds of machine learning algorithms are used to build classifiers. There are main two ways to build classifiers:
+
+* **Generative** classifiers like **naive Bayes** build a model of how a class could generate some input data. Given an observation, they return the class most likely to have generated the observation.
+* **Discriminative** classifiers like **logistic regression** instead learn what features from the
+  input are most useful to discriminate between the different possible classes.
+
+While discriminative systems are often more accurate and hence more commonly used, generative classifiers still have a role.
+
+## Naive Bayes
 
 
 
