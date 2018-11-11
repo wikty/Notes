@@ -964,7 +964,7 @@ combine data from multiple domains (for example we might have less in-domain
 training data but more general data that we then need to adapt) (Bulyko et al. 2003,
 Bacchiani et al. 2004, Bellegarda 2004, Bacchiani et al. 2006, Hsu 2007, Liu et al. 2013).
 
-# Chapter 4 - Sentiment Analysis
+# Chapter 4 - Text Classification with Naive Bayes
 
 ## Text Classification
 
@@ -998,9 +998,424 @@ Many kinds of machine learning algorithms are used to build classifiers. There a
 
 While discriminative systems are often more accurate and hence more commonly used, generative classifiers still have a role.
 
-## Naive Bayes
+## Naive Bayes Classifier
+
+### Classifier model
+
+Naive Bayes is a probabilistic classifier, meaning that for a document $d$, out of all classes $c \in C$ the classifier returns the class $\hat {c}$ which has the maximum posterior probability given the document:
 
 
+$$
+\hat {c} = \mathop{\arg\max}_{c \in C} P(c|d)
+$$
+
+
+According Bayes’ rule, the posterior can be calculated from prior and likelihood:
+
+
+$$
+P(c|d)=\frac{P(d|c)P(c)}{P(d)}
+$$
+
+
+Then the classifier's equation can be represented as following:
+
+
+$$
+\begin{equation}
+\begin{split}
+\hat {c} & = \mathop{\arg\max}_{c \in C} P(c|d) \\
+         & = \mathop{\arg\max}_{c \in C} {\frac{P(d|c)P(c)}{P(d)}}
+\end{split}
+\end{equation}
+$$
+
+
+The above means we should build models for $P(d|c)$ and $P(c)$, then estimate the parameters of them. And because the denominator $P(d)$ is unrelated to the class $c$, so we can drop it:
+
+
+$$
+\hat {c} = \mathop{\arg\max}_{c \in C} {P(d|c)P(c)}
+$$
+
+
+Without loss of generalization, we can represent a document $d$ as a set of features $f_1,f_2,\dots,f_n$:
+
+
+$$
+\hat {c} = \mathop{\arg\max}_{c \in C} {P(f_1,f_2,\dots,f_n|c)P(c)}
+$$
+
+
+Next step we should estimate the parameters for $P(d|c)=P(f_1,f_2,\dots,f_n|c)$ and $P(c)$ models. Is that feasible? It's not feasible, estimating the probability of every possible combination of features would require huge numbers of parameters and impossibly large training sets. We should introduce some assumptions to simplify our model.
+
+### Assumptions
+
+Naive Bayes classifiers make two simplifying assumptions: **bag of words assumption** and **naive Bayes assumption**.
+
+#### Bag of words assumption
+
+We represent a text document as if it were **a bag-of-words**, that is, an unordered set of words with their position ignored, keeping only their frequency in the document.
+
+![](bag-of-words.jpg)
+
+We assume position doesn’t matter, and that the word “love” has the same effect on classification whether it occurs as the 1st, 20th, or last word in the document. Thus we assume that the features $f_1,f_2,\dots,f_n$ only encode word identity and not position.
+
+#### Naive Bayes assumption
+
+This is the conditional independence assumption that the feature $f_i$ and $f_j$ are independent given the class $c$, so we get:
+
+
+$$
+P(d|c) = P(f_1,f_2,\dots,f_n|c) = \prod_{i}P(f_i|c)
+$$
+
+
+#### The final classifier model
+
+The final equation for our classifier as follows:
+
+
+$$
+\hat{c} = \mathop{\arg\max}_{c \in C} {P(c) \prod_{f \in F}P(f|c)}
+$$
+
+
+To avoid the underflow for float multiplication, we should do calculations in log space as follows:
+
+
+$$
+\hat{c} = \mathop{\arg\max}_{c \in C} (\log{P(c)} + \sum_{f \in F} \log{P(f|c)})
+$$
+
+
+Note: the class is a linear function for input features in log space.
+
+If we want to classify the document $d$, first we should extract the input features $f_1,f_2,\dots,f_n$ of the document. And then we feed them into our classifier to get the class of the document. But wait, the $P(c)$ and $P(f|c)$ that introduced with parameters, how can we estimate those parameters before use our classifier to classify document.
+
+### Estimate parameters
+
+We'll consider the maximum likelihood estimate to learn the the probabilities $P(c)$ and $P(f_i)$ from the training data.
+
+#### The class prior probability
+
+For the document prior $P(c)$ we ask what percentage of the documents in our training set are in each class:
+
+
+$$
+\hat P(c) = \frac{N_c}{N}
+$$
+
+
+where the $N_c$ is the number of documents in the training data with the class $c$.
+
+#### The feature probability
+
+To learn the probability $P( f_i|c)$, we’ll assume a feature is just the existence of a word in the document’s bag of words, and so we’ll want $P(w_{i}|c)$, which we compute as the fraction of times the word $w_{i}$ appears among all words in all documents of class $c$:
+
+
+$$
+\hat P(w_i|c) = \frac{count(w_i)}{|W|}
+$$
+
+
+where $W$ is all words in all documents of class $c$; $count(w_{i})$ is the occurrences of word $w_i$ in  all documents of class $c$. Note the features of document depends on the text classification task, for sentiment analysis, the words is enough, but for other tasks you may be need to figure out other features.
+
+We may encounter the zero count problem: Naive Bayes naively multiplies all the feature likelihoods together, zero probabilities in the likelihood term for any class will cause the probability of the class to be zero, no matter the other evidence! Some smoothing methods should be used. The simplest solution is the add-one (Laplace) smoothing. While Laplace smoothing is usually replaced by more sophisticated smoothing algorithms in language modeling, it is commonly used in naive Bayes text categorization:
+
+
+$$
+\hat P(w_i|c) = \frac{count(w_i)+1}{|W|+|V|}
+$$
+
+
+where the vocabulary $V$ consists of the union of all the word types in all classes, not just the words in one class $c$.
+
+#### Unknown words
+
+What do we do about words that occur in our test data but are not in our vocabulary at all because they did not occur in any training document in any class?
+
+The solution for such unknown words is to ignore them—remove them from the test document and not include any probability for them at all.
+
+#### Stop words
+
+Some systems choose to completely ignore another class of words: stop words, very frequent words like "the" and "a".
+
+This can be done by sorting the vocabulary
+by frequency in the training set, and defining the top 10–100 vocabulary entries
+as stop words, or alternatively by using one of the many pre-defined stop word list
+available online. Then every instance of these stop words are simply removed from
+both training and test documents as if they had never occurred.
+
+In most text classification applications, however, using a stop word list doesn’t improve performance, and so it is more common to make use of the entire vocabulary and not use a stop word list.
+
+### Improve Naive Bayes for Sentiment Analysis
+
+#### Binary Naive Bayes
+
+For sentiment classification and a number of other text classification tasks, whether a word occurs or not seems to matter more than its frequency. Thus it often improves performance to clip the word counts in each document at 1. This variant is called **Binary Naive Bayes**.
+
+How can we learn the probabilities $P(w_i|c)$ in Binary Naive Bayes? For each document we remove all duplicate words before concatenating them into the single big document $W$ and the estimate of $P(w_i|c)$ is just like before in Naive Bayes. Note the duplicate words have been removed for each document, but there may be appear duplicate words in the big document $W$, because a word may be appear in multiple documents.
+
+#### Deal with Negation
+
+Consider the difference between "I really like this movie" (positive) and "I didn’t like this movie" (negative). The negation expressed by "didn’t" completely alters the inferences we draw from the predicate "like".
+
+A very simple baseline that is commonly used in sentiment to deal with negation is during **text normalization** to prepend the prefix `NOT_` to every word after a token of logical negation (n’t, not, no, never) until the next punctuation mark. Thus the phrase `didn't like this movie , but I` becomes `didn't NOT_like NOT_this NOT_movie , but I`. Those newly formed ‘words’ like `NOT_like`, `NOT_recommended` will thus occur more often in negative document and act as cues for negative sentiment, while words like `NOT_bored`, `NOT_dismiss` will acquire positive associations.
+
+#### Sentiment Lexicon
+
+In some situations we might have insufficient labeled training data to
+train accurate naive Bayes classifiers using all words in the training set to estimate
+positive and negative sentiment. In such cases we can instead derive the positive and negative word features from sentiment lexicons, lists of words that are pre-annotated with positive or negative sentiment.
+
+A common way to use lexicons in a naive Bayes classifier is to add a feature
+that is counted whenever a word from that lexicon occurs.
+
+### Naive Bayes for other text classification tasks
+
+Naive Bayes doesn’t require that our classifier use all the words in the training data as features. In fact features in naive Bayes can express any property of the input text we want.
+
+#### Spam Detection
+
+Consider the task of spam detection, deciding if a particular piece of email is an example of spam. A common solution here, rather than using all the words as individual features, is to predefine likely sets of **words or phrases** as features, combined these with features that are **not purely linguistic**.
+
+* Email subject line is all capital letters
+* Contains phrases of urgency like “urgent reply”
+* Email subject line contains “online pharmaceutical”
+* HTML has unbalanced ”head” tags
+* Claims you can be removed from the list
+* The path that the email took to arrive
+
+#### Language ID
+
+language ID—determining what language a given piece of text is written in—the most effective naive Bayes features are not words at all, but **byte n-grams** or character-level n-grams.
+
+Language ID systems are trained on multilingual text, such asWikipedia (Wikipedia
+text in 68 different languages were used in (Lui and Baldwin, 2011)), or newswire.
+To make sure that this multilingual text correctly reflects different regions, dialects,
+and socio-economic classes, systems also add Twitter text in many languages geotagged
+to many regions (important for getting world English dialects from countries
+with large Anglophone populations like Nigeria or India), Bible and Quran translations,
+slang websites like Urban Dictionary, corpora of African American Vernacular
+English (Blodgett et al., 2016), and so on (Jurgens et al., 2017).
+
+#### Language Model
+
+Specifically, a naive Bayes model can be viewed as a set of class-specific unigram language models, in which the model for each class instantiates a unigram language model. Since the likelihood features from the naive Bayes model assign a probability to each word $P(w_{i}|c)$, the model also assigns a probability to each sentence $s$:
+
+
+$$
+P(s|c) = \prod_{i \in postions} P(w_i|c)
+$$
+
+
+## Evaluation: Accuracy, Precision, Recall, F-measure
+
+### Qualitative
+
+We need a metric for knowing how well our **binary classifier** is doing. Let's start to do some visualization jobs.
+
+#### Contingency table
+
+Contingency table provides a basic picture of the interrelation between  variables and can help find interactions between them. For example, as follows:
+
+![](contingency-table.jpg)
+
+The example above is the simplest kind of contingency table, a table in which each variable has only two levels; this is called a 2 × 2 contingency table. In principle, any number of rows and columns may be used. There may also be more than two variables, but higher order contingency tables are difficult to represent visually. 
+
+Assuming, there are two variables "system output labels" and "gold standard labels". The **contingency table** for them as follows.
+
+![](contingency-table-evaluation.jpg)
+
+ #### Confusion matrix
+
+Confusion matrix is a special kind of contingency table, with two dimensions ("actual" and "predicted"). For example, as follows:
+
+![](confusion_matrix.jpg)
+
+The confusion matrix for evaluation as follows:
+
+![](confusion-matrix-evaluation.jpg)
+
+#### Venn digram
+
+![](venn-precision-recall.jpg)
+
+### Quantitative
+
+#### Accuracy
+
+Accuracy is a unreliable metric method.
+
+
+$$
+accuracy = \frac{TP+TN}{TP+TN+FP+FN}
+$$
+
+
+Although accuracy might seem a natural metric, we generally don’t use it. That’s because accuracy doesn’t work well when the classes are unbalanced. In other words, accuracy is not a good metric when the goal is to discover something that is rare, or at least not completely balanced in frequency, which is a very common situation in the world. In general, the number of negative examples is very larger than the number of positive examples, if a classifier assign negative label to every examples, then we'll be cheated by its high accuracy.
+
+#### Precision
+
+Precision measures the percentage of the items that the system detected (i.e., the system labeled as positive) that are in fact positive (i.e., are positive according to the human gold labels).
+
+
+$$
+precision = \frac{TP}{TP+NP}
+$$
+
+
+#### Recall
+
+Recall measures the percentage of items actually present in the input that were correctly identified by the system.
+
+
+$$
+recall = \frac{TP}{TP+FN}
+$$
+
+
+#### F-Score
+
+There are many ways to define a single metric that incorporates aspects of both precision and recall. The simplest of these combinations is the F-score:
+
+
+$$
+F_{\beta}=\frac{({\beta}^2 + 1)PR}{{{\beta}^2 P} + R}
+$$
+
+
+The $\beta$ parameter differentially weights the importance of recall and precision, based perhaps on the needs of an application. Values of $\beta > 1$ favor recall, while values of $\beta < 1$ favor precision. When $\beta = 1$, precision and recall are equally balanced; this is the most frequently used metric, and is called $F_1$.
+
+
+$$
+F_1 = \frac{2PR}{P+R}
+$$
+
+
+F-score comes from a weighted **harmonic mean** of precision and recall.
+
+## Multi-class Classification
+
+There are two kinds of multi-class classification tasks:
+
+* In **any-of** or **multi-label** classification, each document or item can be assigned more than one label. We can solve any-of classification by building separate binary classifiers for each class $c$, trained on positive examples labeled $c$ and negative examples not labeled $c$. Given a test document, then each classifier makes their decision independently, and we may assign multiple labels to the document.
+* More common in language processing is **one-of** or **multinomial** classification, in which the classes are mutually exclusive and each document or item appears in exactly one class. Here we again build a separate binary classifier trained on positive examples from $c$ and negative examples from all other classes. Now given a test document, we run all the classifiers and choose the label from the classifier with the highest score.
+
+### Evaluate for multi-classifier
+
+### Confusion matrix
+
+Confusion matrix is suitable for multi-class classification.
+
+![](confusion-matrix-multi-class.jpg)
+
+As showing above, we can compute a distinct precision and recall value for each class.
+
+### Macroaveraging and Microaveraging
+
+In order to derive a single metric that tells us how well the system is doing, we can combine these values in two ways:
+
+* In **macroaveraging**, we compute the performance for each class, and then average over classes.
+* In **microaveraging**, we collect the decisions for all classes into a single contingency table, and then compute precision and recall from that table.
+
+For example:
+
+![](macro-micro-averaging.jpg)
+
+A microaverage is dominated by the more frequent class (in this case spam), since the counts are pooled. The macroaverage better reflects the statistics of the smaller classes, and so is more appropriate when performance on all the classes is equally important.
+
+## Statistical Significance Testing
+
+### Comparing models once time is not enough
+
+In building systems we are constantly comparing the performance of systems. Often
+we have added some new bells and whistles to our algorithm and want to compare
+the new version of the system to the unaugmented version. Or we want to compare
+our algorithm to a previously published one to know which is better.
+
+We might imagine that to compare the performance of two classifiers A and B
+all we have to do is look at A and B’s evaluation score on the same test set. and see whether it’s A or B that has the higher score. But just looking at this one difference isn’t good enough, because
+A might have a better performance than B on a particular test set just by chance.
+
+### Testing models performance in average
+
+Let’s say we have a test set $x$ of $n$ observations $x = x_1;x_2;\dots,x_n$ on which A’s performance is better than B by $\delta(x)$ that is the performance difference between A and B. 
+
+The goal of us is to test if A is better than B for all kinds of test set $x$ in average. More formally, if we had a random variable $X$ ranging over test sets, we want to test if A is better than B on this random dataset in average.
+
+#### Hypothesis and Testing
+
+* The **null hypothesis** is A isn’t really better than B and this difference $\delta (x)$ occurred purely by chance, i.e., $P(\delta (X) > \delta(x) | H_0)$ is sufficiently small, this value is called $p \mbox{-} value(x)$
+* We define a **significance threshold** of 0.05 or 0.01
+* hypothesis **rejected**: If we had many test sets of size $n$ and we measure all the $\delta (x^{i})$ for all the $x^{i}$. If we find $\delta (x^{i})$ is smaller than $\delta (x)$ in average, the $p \mbox{-} value(x)$ is sufficiently small less than the significance threshold, then we might reject the null hypothesis and agree that $\delta (x)$ was a sufficiently surprising difference and A is really a better algorithm than B.
+
+#### Bootstrap Test
+
+In language processing we don’t generally use traditional statistical approaches like paired t-tests to compare system outputs because most metrics are not normally distributed, violating the assumptions of the tests. The standard approach to computing p-value(x) in natural language processing is to use non-parametric tests like the **bootstrap test**.
+
+* How can we create many test sets for testing?
+
+  The **bootstrapping** refers to repeatedly drawing large numbers of smaller
+  samples with replacement (called bootstrap samples) from an original larger sample.
+  The intuition of the bootstrap test is that we can create many virtual test sets $x^{i}$
+  from an observed test set $x$ by repeatedly sampling from it. The method only makes
+  the assumption that the sample is representative of the population.
+
+* How can we do statistics on how often A has an accidental advantage?
+
+  The $x^{i}$ were sampled from $x$, and so the expected value of $\delta ({x^i)}$ lies very close to $\delta (x)$. Thus, We want to count if $\delta ({x^i)} - \delta (x) > \delta (x)$ for each virtual test set $x^i$ that means A to beat B by $\delta (x)$. And treat $\frac{s}{b}$ as p-value. $s$ is the value of the count and $b$ is the number of virtual test sets.
+
+
+## Misc
+
+### Cross Validation
+
+we randomly choose a training and test set division of
+our data, train our classifier, and then compute the error rate on the test set. Then
+we repeat with a different randomly selected training set and test set. We do this
+sampling process **10 times** and average these 10 runs to get an **average error rate**. This is called **10-fold cross-validation**.
+
+### Feature Selection
+
+Feature selection is a method of removing features that are unlikely to generalize well. The basis of feature selection is to assign some metric of goodness to each feature, rank the features, and keep the best ones. The number of features to keep is a meta-parameter that can be optimized on a validation set.
+
+Features are generally ranked by how informative they are about the classification decision. A very common metric is **information gain**. Information gain tells us how many bits of information the presence of the feature gives us for guessing the class.
+
+## Summary
+
+**Multinomial naive Bayes** text classification was proposed by Maron (1961) at the
+RAND Corporation for the task of assigning subject categories to journal abstracts.
+His model introduced most of the features of the modern form presented here, approximating
+the classification task with one-of categorization, and implementing
+add-d smoothing and information-based feature selection.
+
+Metsis et al. (2006), Pang et al. (2002), and Wang and Manning (2012) show
+that using boolean attributes with multinomial naive Bayes works better than full
+counts. **Binary multinomial naive Bayes** is sometimes confused with another variant
+of naive Bayes that also use a binary representation of whether a term occurs in
+a document: **Multivariate Bernoulli naive Bayes**. The Bernoulli variant instead
+estimates P(w|c) as the fraction of documents that contain a term, and includes a
+probability for whether a term is not in a document. McCallum and Nigam (1998)
+and Wang and Manning (2012) show that the multivariate Bernoulli variant of naive
+Bayes doesn’t work as well as the multinomial algorithm for sentiment or other text
+tasks.
+
+There are a variety of sources covering the many kinds of text classification
+tasks. For sentiment analysis see Pang and Lee (2008), and Liu and Zhang (2012).
+Stamatatos (2009) surveys authorship attribute algorithms. On language identification
+see Jauhiainen et al. (2018); Jaech et al. (2016) is an important early neural
+system. See Manning et al. (2008) and Aggarwal and Zhai (2012) on text classification;
+
+Non-parametric methods for computing statistical significance were used first in
+NLP in the MUC competition (Chinchor et al., 1993), and even earlier in speech
+recognition (Gillick and Cox 1989, Bisani and Ney 2004). Our description of the
+bootstrap draws on the description in Berg-Kirkpatrick et al. (2012). Recent work
+has focused on issues including multiple test sets and multiple metrics (Søgaard
+et al. 2014, Dror et al. 2017).
+
+Guyon and Elisseeff (2003) for a broad introduction survey of feature selection.
 
 
 # Reference
@@ -1030,3 +1445,5 @@ A **lemma** is a set of lexical forms having the same stem, the same major part-
 **Code switching**, It’s also quite common for speakers or writers to use multiple languages in a single communicative act, a phenomenon called code switching.
 
 **Unknow words** are words that a system has not seen before.
+
+**Gold labels** are the human-defined labels for example.
