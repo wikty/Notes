@@ -230,16 +230,166 @@ The feed-forward network with just one hidden layer is capable to approximate wi
 * the theoretical result does not state how large the hidden layer should be, nor does it say anything about the **learnability** of the neural network (in practice, it may be will hard to learn the network with a very very large hidden layer.)
 * With the same number of neurons, the number of features that a deep network can represent is an exponential times of the shallow network.
 
-.
+## Activation functions
+
+The non-linear activation function $\alpha$ can take many forms. There is currently no good theory as to which non-linearity to apply in which conditions, and choosing the correct non-linearity for a given task is for the most part an empirical question. 
+
+**Sigmoid** is an S-shaped function, mapping x into range [0, 1]
+
+
+$$
+\sigma(x)=\frac{1}{1+\exp(-x)}=\frac{exp(x)}{exp(x)+1} \in (0, 1) \\
+\sigma^{'}(x)=\sigma(x)(1-\sigma(x))
+$$
+
+
+**Hyperbolic tangent (tanh)** is an S-shaped function, mapping x into range [-1, 1]
+
+
+$$
+\tanh(x)=\frac{\exp(x)-\exp(-x)}{\exp(x)+\exp(-x)}=\frac{exp(2x)-1}{exp(2x)+1}=2\sigma(2x)-1 \in (-1, 1) \\
+\tanh^{'}(x)=4\sigma(2x)(1-\sigma(2x))
+$$
+
+
+**Hard tanh** is an approximation of the tanh function which is faster to compute and take derivatives
+
+
+$$
+\begin{equation}
+hardtanh(x)=
+  \begin{cases}
+  -1, & x<-1 \\
+  1, & x>1 \\
+  x, & otherwise
+  \end{cases}
+
+\\
+
+hardtanh^{'}(x)=
+  \begin{cases}
+  0, & x<-1 \\
+  0, & x>1 \\
+  1, & otherwise
+  \end{cases}
+\end{equation}
+$$
+
+
+**Rectified linear unit (ReLU)** is a very simple activation function that is easy to work with and was shown many times to produce excellent results, especially when combined with the dropout regularization technique
+
+
+$$
+\begin{equation}
+ReLu(x)=
+  \begin{cases}
+  0, & x<0 \\
+  x, & otherwise
+  \end{cases}
+
+\\
+
+ReLU^{'}(x)=
+  \begin{cases}
+  0, & x<0 \\
+  1, & otherwise
+  \end{cases}
+\end{equation}
+$$
+
+
+The technical advantages of the ReLU over the sigmoid and tanh activation functions is that it does not involve expensive-to-compute functions, and more importantly that it does not **saturate**. The sigmoid and tanh activation are capped at 1, and the gradients at this region of the functions are near zero, driving the entire gradient near zero. The ReLU activation does not have this problem, making it especially suitable for networks with multiple layers, which are susceptible to the **vanishing gradients problem** when trained with the saturating units.
+
+**Cube** activation function $cube(x)=x^{3}$ was suggested by (Chen & Manning, 2014), who found it to be more effective than other non-linearities in a feed-forward network that was used to predict the actions in a greedy transition-based dependency parser.
+
+**Tanh Cube** activation function $tanhcube(x)=tanh(x^{3}+x)$ was proposed by (Pei et al., 2015), who found it to be more effective than other non-linearities in a feed-forward network that was used as a component in a structured-prediction graph-based dependency parser.
+
+## The general framework for NLP tasks
+
+The general structure for an NLP classification system based on a feed-forward neural network as follows:
+
+1. Extract a set of core linguistic features $f_1,f_2,\dots,f_n$ that are relevant for predicting the output class.
+2. For each feature $f_{i}$ of interest, retrieve the corresponding representation vector $v(f_{i})$.
+3. Combine the vectors (either by concatenation, summation or a combination of both) into an input vector $x$.
+4. Feed $x$ into a non-linear feed-forward neural network classifier.
+
+### Embedding layers
+
+#### Embedding matrix
+
+Consider a vocabulary of $|V|$ words, each embedded as a $d$ dimensional vector. The collection of vectors can then be thought of as a embedding matrix $E_{|V| \times d}$ in which each row corresponds to an embedded feature. This matrix, just like other weights and biases, is adjusted during training models.
+
+#### Input Features to embedded features
+
+Assume the input to the network is a collection of one-hot vectors, i.e., the input feature $f_{i}$ is represented as one-hot vector, then the corresponding embedded vector as follows:
+
+
+$$
+v(f_{i})=f_iE
+$$
+
+
+But in practice, we have an efficient implementation, the input feature is represented as the index of vocabulary, then use a hash-based data structure mapping input features to their corresponding embedding vectors, without going through the one-hot representation.
+
+#### Features combined
+
+In general, the input vector $x$ for feed-forward neural network is composed of various embeddings vectors.  How can we combine those vectors?
+
+**concatenate**
+
+
+$$
+x = [v(f_1);v(f_2);\dots;v(f_n)]
+$$
+
+
+**sum**
+
+
+$$
+x=v(f_1)+v(f_2)+\dots+v(f_n)
+$$
+
+
+The way of combination embedding vectors is an essential part of the network's design, and likewise treat the word embeddings $v(f_{i})$ as resulting from an **embedding layer** or **lookup layer**.
 
 
 
-The general structure for an NLP classication system based on a feed-forward neural
-network is thus:
 
-1. Extract a set of core linguistic features f1; : : : ; fk that are relevant for predicting the
-  output class.
-2. For each feature fi of interest, retrieve the corresponding vector v(fi).
-3. Combine the vectors (either by concatenation, summation or a combination of both)
-  into an input vector x.
-4. Feed x into a non-linear classier (feed-forward neural network).
+
+### Output layer transforming
+
+A common transformation for **multi-class** tasks is **softmax**, to make the output as a discrete probability distribution over k possible outcomes:
+
+
+$$
+softmax(score_i)=\frac{exp(score_i)}{\sum_{j}{\exp(score_j)}}
+$$
+
+
+The softmax output transformation is used when we are interested in modeling a probability distribution over the possible output classes. To be effective, it should be used in conjunction with a probabilistic training objective function such as **cross-entropy**.
+
+The likelihood function of data set for softmax output layer is:
+
+
+$$
+\prod_{n}^{N}{\prod_{k}^{K}{o_k}^{l_k}}
+$$
+
+
+where $o$ is the vector of output layer; and $l$ is the ground label vector;
+
+The goal of training is to minimize the objective function as follows:
+
+
+$$
+-\log(\prod_{n}^{N}{\prod_{k}^{K}{o_k}^{l_k}})=-\sum_{n}^{N}{\sum_{k}^{K}{l_k}\log({o_k})}
+$$
+
+
+
+
+
+
+
+
