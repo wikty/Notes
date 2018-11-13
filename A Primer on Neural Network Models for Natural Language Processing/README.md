@@ -171,7 +171,7 @@ for constituency and dependency parse re-ranking, discourse parsing, semantic re
 
 # Feed-forward neural networks
 
-## Architectures
+## Network Architectures
 
 Neural network consists of computation units called neurons. Each input has an associated weight, reflecting its importance to the output of neuron. The neuron multiplies each input by its weight, and then sums them, applies a non-linear function to the result, and passes it to its output. The neurons are connected to each other, forming a network: the output of a neuron may feed into the inputs of one or more neurons.
 
@@ -191,7 +191,7 @@ where $\alpha$  non-linear activation function has a crucial role in the network
 
 Layers resulting from linear transformations are often referred to as **fully connected**, or **affine**. Other types of architectures exist. In particular, image recognition problems benefit from **convolutional** and **pooling** layers.
 
-## Components
+## Network Components
 
 ### Input layer
 
@@ -209,11 +209,19 @@ In case $d_{\text{out}}=1$, the network's output is a scalar. Such networks can 
 
 Networks with $d_{\text{out}}=k>1$ can be used for k-class classification, by associating each dimension with a class, and looking for the dimension with maximal value.
 
-Similarly, if the output vector entries are positive and sum to one, the output can be interpreted as a distribution over k-classes. We can apply a softmax transformation on the output layer to achieve this.
+Similarly, if the output vector entries are positive and sum to one, the output can be interpreted as a distribution over k-classes. We can apply a **softmax** transformation on the output layer to achieve this.
 
 ### Parameters
 
 The matrices and the bias terms that define the linear transformations are the parameters of the network. It is common to refer to the collection of all parameters as $\theta$. Together with the input, the parameters determine the network's output. The training algorithm is responsible for setting their values such that the network's predictions are correct.
+
+### Word Embeddings
+
+The raw features in natural language, like words and part-of-speech and so on, should be mapped into a more dense representation. The word embedding is a way to represent dense vector for those features.
+
+The word embeddings are an essential part of the network's design, it's worked just like another layer and commonly it's inserted before the first hidden layer, be called an **embedding layer** or **lookup layer**.
+
+Word embeddings are just like other parameters in the network, will be learned during training.
 
 ## Why we need deep learning
 
@@ -228,9 +236,105 @@ The feed-forward network with just one hidden layer is capable to approximate wi
 * the theoretical result does not state how large the hidden layer should be, nor does it say anything about the **learnability** of the neural network (in practice, it may be will hard to learn the network with a very very large hidden layer.)
 * With the same number of neurons, the number of features that a deep network can represent is an exponential times of the shallow network.
 
+## The general framework for NLP tasks
+
+The general structure for an NLP classification system based on a feed-forward neural network as follows:
+
+1. Extract a set of core linguistic features $f_1,f_2,\dots,f_n$ that are relevant for predicting the output class.
+2. For each feature $f_{i}$ of interest, retrieve the corresponding representation vector $v(f_{i})$.
+3. Combine the representation vectors (either by concatenation, summation or a combination of both) into an input vector $x$.
+4. Feed $x$ into a non-linear feed-forward neural network classifier.
+
+### Embedding layers
+
+We'll represent each input feature as a vector in a low dimensional space, i.e., map the sparse representation to the dense representation.
+
+#### Embedding matrix
+
+Consider a vocabulary of $|V|$ words, each embedded as a $d$ dimensional vector. The collection of vectors can then be thought of as a embedding matrix $E_{|V| \times d}$ in which each row corresponds to an embedded feature. This matrix, just like other weights and biases, is adjusted during training models.
+
+#### Input Features to embedded features
+
+Assume the input to the network is a collection of one-hot vectors, i.e., the input feature $f_{i}$ is represented as one-hot vector, then the corresponding embedded vector as follows:
+
+$$
+v(f_{i})=f_iE
+$$
+
+But in practice, we have an efficient implementation, e.g., the input feature is represented as the index of vocabulary, then use a hash-based data structure mapping input features to their corresponding embedding vectors, without going through the one-hot representation.
+
+#### Features combined
+
+In general, the input vector $x$ for feed-forward neural network is composed of various embeddings vectors.  How can we combine those vectors?
+
+**concatenate**
+
+$$
+x = [v(f_1);v(f_2);\dots;v(f_n)]
+$$
+
+**sum**
+
+$$
+x=v(f_1)+v(f_2)+\dots+v(f_n)
+$$
+
+The way of combination embedding vectors is an essential part of the network's design, and likewise treat the word embeddings $v(f_{i})$ as resulting from an **embedding layer** or **lookup layer**.
+
+### Implicit embedding
+
+It is important to note that representing features as dense vectors is an integral part of the neural network framework. In fact, using sparse, one-hot vectors as input when training a neural network amounts to dedicating the first layer of the network to learning a dense embedding vector for each feature based on the training data.
+
+Assume we don't have the embedding layer, and the input feature $f_{i}$ is one-hot representation and the network's input is $x=\sum_{i}^{n}{f_{i}}$, the first layer affine transformation as follows:
+
+$$
+h^{(1)}=xW^{(1)}=\sum_{i}^{n}{f_{i}}W^{(1)}=\sum_{i}^{n}W_{index(f_i):,}^{(1)}
+$$
+
+where $index(f_{i})$ returns the index of non-zero element in the $f_{i}$ feature.
+
+Now assume we have a embedding layer $E$,  the input feature $f_{i}$ is the index of vocabulary and we'll sum all features:
+
+
+$$
+x=\sum_i^n{v(f_i)}=\sum_i^n{E_{f_i,:}}
+$$
+
+
+As you can see, If we don't have a embedding layer, the weights matrix $W^{(1)}$ will be equal to the embedding matrix $E$, and the first hidden layer $h^{(1)}$ will be equal to the input $x$ for the network equipped with embedding layer.
+
+### Output layer transforming
+
+A common transformation for **multi-class** tasks is **softmax**, to make the output as a discrete probability distribution over k possible outcomes:
+
+$$
+softmax(score_i)=\frac{exp(score_i)}{\sum_{j}{\exp(score_j)}}
+$$
+
+The softmax output transformation is used when we are interested in modeling a probability distribution over the possible output classes. To be effective, it should be used in conjunction with a probabilistic training objective function such as **cross-entropy**.
+
+The likelihood function of data set for softmax output layer is:
+
+$$
+\prod_{n}^{N}{\prod_{k}^{K}{o_k}^{l_k}}
+$$
+
+where $o$ is the vector of output layer; and $l$ is the ground label vector;
+
+The goal of training is to minimize the objective function as follows:
+
+$$
+-\log(\prod_{n}^{N}{\prod_{k}^{K}{o_k}^{l_k}})=-\sum_{n}^{N}{\sum_{k}^{K}{l_k}\log({o_k})}
+$$
+
+
+
+
 ## Activation functions
 
 The non-linear activation function $\alpha$ can take many forms. There is currently no good theory as to which non-linearity to apply in which conditions, and choosing the correct non-linearity for a given task is for the most part an empirical question. 
+
+### Sigmoid
 
 **Sigmoid** is an S-shaped function, mapping x into range [0, 1]
 
@@ -239,15 +343,17 @@ $$
 \sigma^{'}(x)=\sigma(x)(1-\sigma(x))
 $$
 
-**Hyperbolic tangent (tanh)** is an S-shaped function, mapping x into range [-1, 1]
+### Tanh
 
+**Hyperbolic tangent (tanh)** is an S-shaped function, mapping x into range [-1, 1]
 $$
 \tanh(x)=\frac{\exp(x)-\exp(-x)}{\exp(x)+\exp(-x)}=\frac{exp(2x)-1}{exp(2x)+1}=2\sigma(2x)-1 \in (-1, 1) \\
 \tanh^{'}(x)=4\sigma(2x)(1-\sigma(2x))
 $$
 
-**Hard tanh** is an approximation of the tanh function which is faster to compute and take derivatives
+### Hard Tanh
 
+**Hard tanh** is an approximation of the tanh function which is faster to compute and take derivatives
 $$
 \begin{equation}
 hardtanh(x)=
@@ -268,9 +374,9 @@ hardtanh^{'}(x)=
 \end{equation}
 $$
 
+### ReLU
 
 **Rectified linear unit (ReLU)** is a very simple activation function that is easy to work with and was shown many times to produce excellent results, especially when combined with the dropout regularization technique
-
 
 $$
 \begin{equation}
@@ -290,118 +396,15 @@ ReLU^{'}(x)=
 \end{equation}
 $$
 
-
 The technical advantages of the ReLU over the sigmoid and tanh activation functions is that it does not involve expensive-to-compute functions, and more importantly that it does not **saturate**. The sigmoid and tanh activation are capped at 1, and the gradients at this region of the functions are near zero, driving the entire gradient near zero. The ReLU activation does not have this problem, making it especially suitable for networks with multiple layers, which are susceptible to the **vanishing gradients problem** when trained with the saturating units.
+
+### Cube
 
 **Cube** activation function $cube(x)=x^{3}$ was suggested by (Chen & Manning, 2014), who found it to be more effective than other non-linearities in a feed-forward network that was used to predict the actions in a greedy transition-based dependency parser.
 
+### Tanh Cube
+
 **Tanh Cube** activation function $tanhcube(x)=tanh(x^{3}+x)$ was proposed by (Pei et al., 2015), who found it to be more effective than other non-linearities in a feed-forward network that was used as a component in a structured-prediction graph-based dependency parser.
-
-## The general framework for NLP tasks
-
-The general structure for an NLP classification system based on a feed-forward neural network as follows:
-
-1. Extract a set of core linguistic features $f_1,f_2,\dots,f_n$ that are relevant for predicting the output class.
-2. For each feature $f_{i}$ of interest, retrieve the corresponding representation vector $v(f_{i})$.
-3. Combine the vectors (either by concatenation, summation or a combination of both) into an input vector $x$.
-4. Feed $x$ into a non-linear feed-forward neural network classifier.
-
-### Embedding layers
-
-#### Embedding matrix
-
-Consider a vocabulary of $|V|$ words, each embedded as a $d$ dimensional vector. The collection of vectors can then be thought of as a embedding matrix $E_{|V| \times d}$ in which each row corresponds to an embedded feature. This matrix, just like other weights and biases, is adjusted during training models.
-
-#### Input Features to embedded features
-
-Assume the input to the network is a collection of one-hot vectors, i.e., the input feature $f_{i}$ is represented as one-hot vector, then the corresponding embedded vector as follows:
-
-
-$$
-v(f_{i})=f_iE
-$$
-
-
-But in practice, we have an efficient implementation, e.g., the input feature is represented as the index of vocabulary, then use a hash-based data structure mapping input features to their corresponding embedding vectors, without going through the one-hot representation.
-
-#### Features combined
-
-In general, the input vector $x$ for feed-forward neural network is composed of various embeddings vectors.  How can we combine those vectors?
-
-**concatenate**
-
-
-$$
-x = [v(f_1);v(f_2);\dots;v(f_n)]
-$$
-
-
-**sum**
-
-
-$$
-x=v(f_1)+v(f_2)+\dots+v(f_n)
-$$
-
-
-The way of combination embedding vectors is an essential part of the network's design, and likewise treat the word embeddings $v(f_{i})$ as resulting from an **embedding layer** or **lookup layer**.
-
-### Implicit embedding
-
-It is important to note that representing features as dense vectors is an integral part of the neural network framework. In fact, using sparse, one-hot vectors as input when training a neural network amounts to dedicating the first layer of the network to learning a dense embedding vector for each feature based on the training data.
-
-Assume we don't have the embedding layer, and the input feature $f_{i}$ is one-hot representation and the network's input is $x=\sum_{i}^{n}{f_{i}}$, the first layer affine transformation as follows:
-
-
-
-
-$$
-h^{(1)}=xW^{(1)}=\sum_{i}^{n}{f_{i}}W^{(1)}=\sum_{i}^{n}W_{index(f_i):,}^{(1)}
-$$
-
-
-where $index(f_{i})$ returns the index of non-zero element in the $f_{i}$ feature.
-
-Now assume we have a embedding layer $E$,  the input feature $f_{i}$ is the index of vocabulary and we'll sum all features:
-
-
-$$
-x=\sum_i^n{v(f_i)}=\sum_i^n{E_{f_i,:}}
-$$
-
-
-As you can see, If we don't have a embedding layer, the weights matrix $W^{(1)}$ will be equal to the embedding matrix $E$, and the first hidden layer $h^{(1)}$ will be equal to the input $x$ for the network equipped with embedding layer.
-
-### Output layer transforming
-
-A common transformation for **multi-class** tasks is **softmax**, to make the output as a discrete probability distribution over k possible outcomes:
-
-
-$$
-softmax(score_i)=\frac{exp(score_i)}{\sum_{j}{\exp(score_j)}}
-$$
-
-
-The softmax output transformation is used when we are interested in modeling a probability distribution over the possible output classes. To be effective, it should be used in conjunction with a probabilistic training objective function such as **cross-entropy**.
-
-The likelihood function of data set for softmax output layer is:
-
-
-$$
-\prod_{n}^{N}{\prod_{k}^{K}{o_k}^{l_k}}
-$$
-
-
-where $o$ is the vector of output layer; and $l$ is the ground label vector;
-
-The goal of training is to minimize the objective function as follows:
-
-
-$$
--\log(\prod_{n}^{N}{\prod_{k}^{K}{o_k}^{l_k}})=-\sum_{n}^{N}{\sum_{k}^{K}{l_k}\log({o_k})}
-$$
-
-
 
 ## Loss functions
 
@@ -527,4 +530,59 @@ $$
 
 
 Examples using the ranking hinge loss in language tasks include training with the auxiliary tasks used for deriving **pre-trained word embeddings**, in which we are given a correct word sequence and a corrupted word sequence, and our goal is to score the correct sequence above the corrupt one (Collobert & Weston, 2008).
+
+## Word Embeddings
+
+In this section, we'll figure out how to initialize and train word embeddings.
+
+In general, there are two ways to initialize the word embeddings: **random initialization** and **pre-training**.
+
+In practice, one will often use the **random initialization** approach to initialize the embedding vectors of **commonly occurring features**, such as part-of-speech tags or individual letters, while using some form of supervised or unsupervised **pre-training** to initialize the **potentially rare features**, such as features for individual words. The pre-trained vectors can then either be treated as fixed during the network training process, or, more commonly, treated like the randomly-initialized vectors and further tuned to the task at hand(this is called **transfer learning**).
+
+### Random Initialization
+
+We can initialize the embedding vectors to random values just like the other model parameters, then let training procedure tune them.
+
+Additional, there are some tricks we can use. The method used by the effective **word2vec** implementation (Mikolov et al., 2013; Mikolov, Sutskever, Chen, Corrado, & Dean, 2013) is to initialize the word vectors to **uniformly sampled** random numbers in the range $[-\frac{1}{2d}, \frac{1}{2d}]$ where the $d$ is the dimensionality of representation. Another tirck is to use **xavier initialization** and initialize with uniformly sampled values from $[-\frac{\sqrt 6}{\sqrt d}, \frac{\sqrt 6}{\sqrt d}]$.
+
+### Supervised Pre-training
+
+If we are interested in **task A**, for which we only have a **limited amount of labeled data** (for example, syntactic parsing), but there is an **auxiliary task B** (say, part-of-speech tagging) for which we have **much more labeled data**, we may want to **pre-train word vectors** so that they perform well as predictors for task B, and then use the trained vectors for training task A. Or we can train jointly for A and B tasks.
+
+### Unsupervised Pre-training
+
+The common case is that we do not have an auxiliary task with large enough amounts of annotated data. We need use unsupervised methods to pre-train word vectors on **huge amounts of unannotated data**.
+
+it is worth noting that the word embeddings derived by unsupervised training algorithms have a wide range of applications in NLP beyond using them for initializing the word-embeddings layer of a neural-network model.
+
+#### Supervised auxiliary tasks
+
+We create practically unlimited number of supervised training instances from raw text, hoping that the tasks that we created will match (or be close enough to) the final task we care about. 
+
+And then we use the unannotated data to train those auxiliary tasks by supervised learning methods to improve their performance. Thus the trained embedding vectors for those auxiliary tasks can be used by the final task we care about.
+
+#### Choosing auxiliary tasks
+
+About the choice of auxiliary tasks, we should answer two questions:
+
+1. What kind of embedding vectors we want to learn from auxiliary tasks?
+2. Which auxiliary tasks can learn the word vectors, allowing the model to generalize better on unseen events?
+
+For the first question, the answer is: we would like the embedding vectors of similar words to have similar vectors, i.e., we want word embeddings to learn the similarity between words.
+
+While **word similarity** is hard to define and is usually very **task-dependent**, the current approaches derive from the **distributional hypothesis** (Harris, 1954), stating that **words are similar if they appear in similar contexts**. Thus, the different approaches all create supervised training instances in which the goal is to either **predict the word from its context**, or **predict the context from the word**.
+
+Now we can answer the second question: we desire that the similarity between word vectors learned by the those auxiliary tasks capture the same aspects of similarity that are useful for performing the final task we care about.
+
+For auxiliary tasks ,what is being predicted that based on what kind of context, affects the resulting vectors much more than the learning method that is being used to train them.
+
+#### Advantages of unsupervised approaches
+
+An important benefit of training word embeddings on large amounts of unannotated data is that it provides vector representations for words that do not appear in the supervised training set. Ideally, the representations for these words will be similar to those of related words that do appear in the training set, allowing the model to generalize better on unseen events.
+
+#### Common unsupervised algorithms
+
+Common unsupervised word-embedding algorithms include word2vec 13 (Mikolov et al., 2013, 2013), GloVe (Pennington, Socher, & Manning, 2014) and the Collobert and Weston (2008, 2011) embeddings algorithm.
+
+
 
