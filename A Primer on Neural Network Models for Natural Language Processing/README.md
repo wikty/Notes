@@ -60,7 +60,7 @@ $$
 $$
 
 
-where $v(f_i)$ is the **one-hot** encoding for the $f_i$ feature.
+where $v(f_i)$ is the sparse **one-hot** encoding for the $f_i$ feature.
 
 But this is really a bad idea. Because features are independent in one-hot representation, summing or averaging operator will discard lots of useful information in the input features.
 
@@ -74,7 +74,7 @@ $$
 $$
 
 
-where $v(f_i)$ is the **word embedding** vector for the $f_i$ feature.
+where $v(f_i)$ is the dense **word embedding** vector for the $f_i$ feature.
 
 ### Weighted continuous bags of words
 
@@ -576,13 +576,153 @@ Now we can answer the second question: we desire that the similarity between wor
 
 For auxiliary tasks ,what is being predicted that based on what kind of context, affects the resulting vectors much more than the learning method that is being used to train them.
 
-#### Advantages of unsupervised approaches
-
-An important benefit of training word embeddings on large amounts of unannotated data is that it provides vector representations for words that do not appear in the supervised training set. Ideally, the representations for these words will be similar to those of related words that do appear in the training set, allowing the model to generalize better on unseen events.
-
 #### Common unsupervised algorithms
 
 Common unsupervised word-embedding algorithms include word2vec 13 (Mikolov et al., 2013, 2013), GloVe (Pennington, Socher, & Manning, 2014) and the Collobert and Weston (2008, 2011) embeddings algorithm.
 
+#### Advantages of unsupervised approaches
 
+An important benefit of training word embeddings on large amounts of unannotated data is that it provides vector representations for words that do not appear in the supervised training set. Ideally, the representations for these words will be similar to those of related words that do appear in the training set, allowing the model to generalize better on unseen events.
+
+### Training Objectives of auxiliary tasks
+
+Given a word $w$ and its context $c$, different algorithms formulate different auxiliary tasks. Training the model to perform the auxiliary tasks well will result in good word embeddings for relating the words to the contexts, which in turn will result in the embedding vectors for similar words to be similar to each other.
+
+Language-modeling inspired approaches such as those taken by (Mikolov et al., 2013; Mnih & Kavukcuoglu, 2013) as well as GloVe (Pennington et al., 2014) use auxiliary tasks in which the goal is to predict the word given its context, i.e., to model the conditional probability $P(w|c)$.
+
+### The Choice of Contexts
+
+In most cases, the contexts of a word are taken to be other words that appear in its **surrounding**, either in a short window around it, or within the same sentence, paragraph or document.
+
+In some cases the text is automatically parsed by a syntactic parser, and the contexts are derived from the **syntactic neighbourhood** induced by the automatic parse trees. 
+
+Sometimes, the definitions of words and context change to include also **parts of words**, such as prefixes or suffixes.
+
+Neural word embeddings originated from the world of language modeling(Bengio et al., 2003). Training the language modeling auxiliary prediction problems indeed produce useful word embeddings, and the context   in here is allowed to look only at the previous words. That doesn't mean we must train word embeddings by constraint the context as the previous words for other NLP tasks. We can ignore this constraint and taking the context to be a **symmetric window** around the **focus word**.
+
+#### Sliding Window
+
+The most common approach is a sliding window approach, in which auxiliary tasks are created by looking at a sequence of $2k+1$ words. The middle word is called the **focus word** and the $k$ words to each side are the **contexts**.
+
+##### Training models
+
+There are two kinds of  auxiliary tasks for training:
+
+* Predict the focus word given the context words.
+
+  The goal of task is to predict the focus word based on all of the context words. Context words are represented either using **CBOW** (Mikolov et al., 2013) or **vector concatenation** (Collobert & Weston, 2008)
+
+* Predict the context words given the focus word. $2k$ different tasks are created, each pairing the focus word with a different context word. This is popularized by (Mikolov et al., 2013) is referred to as a **skip gram** model.
+
+Skip-gram based approaches are shown to be robust and efficient to train (Mikolov et al., 2013; Pennington et al., 2014), and often produce state of the art results.
+
+##### Effect of Window Size
+
+The size of the sliding window has a strong effect on the resulting vector similarities. **Larger windows** tend to produce more **topical similarities**, while smaller windows tend to produce more **functional and syntactic similarities**.
+
+##### Positional Contexts
+
+When using the CBOW or skip-gram context representations, all the different context words within the window are treated equally. There is no distinction between context words that are close to the focus words and those that are farther from it, and likewise there is no distinction between context words that appear before the focus words to context words that appear after it.
+
+We can consider positional information by using **positional contexts**: indicating for each context word also its relative position to the focus words, i.e., instead of the context word being "the" it becomes "the:+2", indicating the word appears two positions to the right of the focus word.
+
+Positional vectors were shown by (Ling, Dyer, Black, & Trancoso, 2015a) to be more effective than window-based vectors when used to initialize networks for **part-of-speech** tagging and syntactic **dependency parsing**.
+
+##### Variants
+
+Many variants on the window approach are possible. One may lemmatize words
+before learning, apply text normalization, lter too short or too long sentences, or remove
+capitalization (see, e.g., the pre-processing steps described in (dos Santos & Gatti, 2014).
+One may sub-sample part of the corpus, skipping with some probability the creation of tasks
+from windows that have too common or too rare focus words. The window size may be
+dynamic, using a dierent window size at each turn. One may weigh the dierent positions
+in the window dierently, focusing more on trying to predict correctly close word-context
+pairs than further away ones. Each of these choices will eect the resulting vectors. Some
+of these hyperparameters (and others) are discussed in (Levy et al., 2015).
+
+#### Sentences, paragraphs and documents
+
+Using a **skip-grams** or **CBOW** approach, one can consider the contexts of a word to be all the other words that appear with it in the same sentence, paragraph or document. This is equivalent to using **very large window sizes**, and is expected to result in word vectors that capture **topical similarity**.
+
+#### Syntactic window
+
+Some work replace the linear context within a sentence with a **syntactic** one (Levy & Goldberg, 2014a; Bansal, Gimpel, & Livescu, 2014). The text is automatically parsed using a **dependency parser**, and the context of a word is taken to be the words that are in its proximity in the parse tree, together with the syntactic relation by which they are connected.
+
+Such approaches produce highly **functional similarities**, grouping together words that can fill the same role in a sentence (e.g. colors, names of schools, verbs of movement). The grouping is also syntactic, grouping together words that share an inflection (Levy & Goldberg, 2014a).
+
+#### Multilingual contexts
+
+Another option is using multilingual, translation based contexts (Hermann & Blunsom,
+2014; Faruqui & Dyer, 2014). Here, the context of a word instance are the foreign language words that are aligned to it. Such alignments tend to result in synonym words receiving similar vectors.
+
+### Character and sub-word level representation
+
+An interesting line of work attempts to derive the vector representation of a word from the characters or sub-words that compose it.
+
+**Character based** approaches are likely to be particularly useful for tasks which are syntactic in nature, as the character patterns within words are strongly related to their **syntactic function**. These approaches also have the benefit of producing very small model sizes (only one vector for each character in the alphabet), and being able to provide an embedding vector (concatenation the characters vectors) for every word that may be encountered. 
+
+Deriving representations of words from the representations of their characters is motivated by the unknown words problems. Working on the level of characters alleviates the unknown words problem to a large extent, as the vocabulary of possible characters is much smaller than the vocabulary of possible words.
+
+dos Santos and Gatti (2014) and dos Santos and Zadrozny (2014) model the embedding of a word using a **convolutional network** over the characters.
+
+Ling et al (2015b) model the embedding of a word using the concatenation of the final states of two RNN (LSTM) encoders (**Bi-LSTM**), one reading the characters from left to right, and the other from right to left.
+
+The work of Ballesteros et al (2015) show that the two-LSTMs encoding of (Ling et al., 2015b) is beneficial also for representing words in dependency parsing of morphologically rich languages.
+
+**Sub-word based** approaches in which a word is represented as a combination of a vector for the word itself with vectors of sub-word units that comprise it. Because working on the character level is very challenging, as the relationship between form (characters) and function (syntax, semantics) in language is quite loose. Thus, some researchers propose a compromise method - using sub-word representation to words. 
+
+The sub-word embeddings then help in sharing information between different words with similar forms, as well as allowing back-off to the sub-word level when the word is not observed, and the models are not forced to rely solely on form (sub-words) when enough observations of the word are available.
+
+Botha and Blunsom (2014) suggest to model the embedding vector of a word as a sum of the word-specfic vector if such vector is available, with vectors for the different morphological components that comprise it.
+
+Gao et al (Gao et al., 2014) suggest using as core features not only the word form itself but also a unique feature (hence a unique embedding vector) for each of the letter-trigrams in the word.
+
+## Neural Network Training
+
+Neural network training is done by trying to **minimize** a **loss function** over a **training set**, using a **gradient-based method**.
+
+### Training with SGD
+
+The common approach for training neural networks is using the **stochastic gradient descent** (SGD) algorithm (Bottou, 2012; LeCun, Bottou, Orr, & Muller, 1998a) or a variant of it.
+
+#### Vanilla SGD
+
+The parameters are updated in SGD as follows:
+
+
+$$
+\theta = \theta - \eta {\frac {\partial L(f(x_i;\theta), y_i)} {\partial \theta}}
+$$
+
+
+#### Mini-batch SGD
+
+The SGD calculates the error base on a single training example, and is thus just a rough estimate of the  loss for the whole training set that we are really aiming to minimize. The noise in the loss computation may result in inaccurate gradients. A common way of reducing this noise is to estimate the error and the gradients based on a sample of m samples. This gives rise to the **mini-batch SGD**. The parameters are updated as follows:
+
+
+$$
+grad = \frac {1}{m} \sum_i^m {\frac {\partial L(f(x_i;\theta), y_i)}{\partial \theta}} \\
+\theta = \theta - \eta * grad
+$$
+
+
+Besides the improved accuracy of the gradients estimation, the mini-batch algorithm provides opportunities for improved training efficiency, GPUs can speed up matrix operations in the mini-batch algorithm.
+
+The size of mini-batch is a hyperparameter. Higher values provide better estimates of the whole training set gradients, while smaller values allow more updates and in turn faster convergence.
+
+#### The converge of SGD
+
+With a small enough learning rate, SGD is guaranteed to converge to a global optimum if the function is convex. However, it can also be used to optimize non-convex functions such as neural-network. While there are no longer guarantees of finding a global optimum, the algorithm proved to be robust and performs well in practice.
+
+
+
+### Auto Differentiation
+
+Gradients can be efficiently and automatically computed using **reverse mode differentiation** on a **computation graph** - a general algorithmic framework for automatically computing the gradient of any network and loss function.
+
+#### Computation graph
+
+
+
+#### Reverse mode differentiation
 
