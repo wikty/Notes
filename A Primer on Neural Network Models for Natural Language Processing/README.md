@@ -34,8 +34,6 @@ For example, assume we have observed the word 'dog' many times during training, 
 
 It may be the case that under some circumstances, when the feature space is relatively small and the training data is plentiful, or when we do not wish to share statistical information between distinct words, there are gains to be made from using the one-hot representations. However, this is still an open research question, and there are no strong evidence to either side.
 
-It is important to note that representing features as dense vectors is an integral part of the neural network framework. In fact, using sparse, one-hot vectors as input when training a neural network amounts to dedicating the first layer of the network to learning a dense embedding vector for each feature based on the training data.
-
 Representing words as dense vectors for input to a neural network was introduced by Bengio et al (Bengio et al., 2003) in the context of neural language modeling. It was introduced to NLP tasks in the pioneering work of Collobert, Weston and colleagues (2008, 2011). Using embeddings for representing not only words but arbitrary features was popularized following Chen and Manning (2014).
 
 ## Core Features and Combination Features
@@ -219,7 +217,7 @@ The matrices and the bias terms that define the linear transformations are the p
 
 ## Why we need deep learning
 
-Networks with many hidden layer are said to be deep networks, hence the name deep learning.
+Networks with many hidden layers are said to be deep networks, hence the name deep learning.
 
 ### Universal approximator
 
@@ -236,24 +234,19 @@ The non-linear activation function $\alpha$ can take many forms. There is curren
 
 **Sigmoid** is an S-shaped function, mapping x into range [0, 1]
 
-
 $$
 \sigma(x)=\frac{1}{1+\exp(-x)}=\frac{exp(x)}{exp(x)+1} \in (0, 1) \\
 \sigma^{'}(x)=\sigma(x)(1-\sigma(x))
 $$
 
-
 **Hyperbolic tangent (tanh)** is an S-shaped function, mapping x into range [-1, 1]
-
 
 $$
 \tanh(x)=\frac{\exp(x)-\exp(-x)}{\exp(x)+\exp(-x)}=\frac{exp(2x)-1}{exp(2x)+1}=2\sigma(2x)-1 \in (-1, 1) \\
 \tanh^{'}(x)=4\sigma(2x)(1-\sigma(2x))
 $$
 
-
 **Hard tanh** is an approximation of the tanh function which is faster to compute and take derivatives
-
 
 $$
 \begin{equation}
@@ -329,7 +322,7 @@ v(f_{i})=f_iE
 $$
 
 
-But in practice, we have an efficient implementation, the input feature is represented as the index of vocabulary, then use a hash-based data structure mapping input features to their corresponding embedding vectors, without going through the one-hot representation.
+But in practice, we have an efficient implementation, e.g., the input feature is represented as the index of vocabulary, then use a hash-based data structure mapping input features to their corresponding embedding vectors, without going through the one-hot representation.
 
 #### Features combined
 
@@ -353,9 +346,31 @@ $$
 
 The way of combination embedding vectors is an essential part of the network's design, and likewise treat the word embeddings $v(f_{i})$ as resulting from an **embedding layer** or **lookup layer**.
 
+### Implicit embedding
+
+It is important to note that representing features as dense vectors is an integral part of the neural network framework. In fact, using sparse, one-hot vectors as input when training a neural network amounts to dedicating the first layer of the network to learning a dense embedding vector for each feature based on the training data.
+
+Assume we don't have the embedding layer, and the input feature $f_{i}$ is one-hot representation and the network's input is $x=\sum_{i}^{n}{f_{i}}$, the first layer affine transformation as follows:
 
 
 
+
+$$
+h^{(1)}=xW^{(1)}=\sum_{i}^{n}{f_{i}}W^{(1)}=\sum_{i}^{n}W_{index(f_i):,}^{(1)}
+$$
+
+
+where $index(f_{i})$ returns the index of non-zero element in the $f_{i}$ feature.
+
+Now assume we have a embedding layer $E$,  the input feature $f_{i}$ is the index of vocabulary and we'll sum all features:
+
+
+$$
+x=\sum_i^n{v(f_i)}=\sum_i^n{E_{f_i,:}}
+$$
+
+
+As you can see, If we don't have a embedding layer, the weights matrix $W^{(1)}$ will be equal to the embedding matrix $E$, and the first hidden layer $h^{(1)}$ will be equal to the input $x$ for the network equipped with embedding layer.
 
 ### Output layer transforming
 
@@ -388,8 +403,128 @@ $$
 
 
 
+## Loss functions
+
+When training a neural network, the **training objective** is to **minimize loss function** across the different training examples. The **adjusted parameters** of the network are then set in order to minimize the loss function over the training examples.
+
+Before go further, we should figure out the question: what is a loss function?
+
+A loss function $L(\hat y, y)$ is to measure the loss of predicting $\hat y$ when the true output is $y$. The loss value is always non-negative, and should be zero only for cases where the network's output is correct, i.e., $\hat y = y$.
+
+The loss can be an arbitrary function mapping $(\hat y, y)$ to a scalar. For practical purposes of **optimization**, we restrict ourselves to functions for which we can easily compute **gradients** (or sub-gradients). In most cases, it is sufficient and advisable to rely on a common loss function rather than defining your own.
+
+See more (LeCun, Chopra, Hadsell, Ranzato, & Huang, 2006; LeCun & Huang, 2005; Bengio et al., 2015).
+
+### Hinge Loss
+
+The hinge losses are useful whenever we require a hard decision rule, and do not attempt to model class membership probability.
+
+#### Binary classification
+
+For **binary classification** problems, the network's output is a **single scalar** $\hat y$ and the intended output $y \in \{-1,1\}$. The classification rule is: $prediction=sign(\hat y)$.
+
+The **hinge loss**, also known as **margin loss** or **SVM loss**, is defined as:
 
 
+$$
+L_{hinge}(\hat y, y)=max(0, 1-{\hat y*y})
+$$
 
 
+The loss is zero if and only if $sign(\hat y)=sign(y)$ and $|\hat y|>1$, i.e., the loss attempts to achieve a correct classification with a margin of at least 1.
+
+#### Multi-class classification
+
+The hinge loss was extended to the multi-class setting by Crammer and Singer (2002).
+
+Let the output $\hat y = {\hat y_1}, {\hat y_2}, \dots, {\hat y_k}$ and $y$ be the one-hot vector for the correct output class. The classification rule is defined as selecting the class with the highest score: $prediction = \mathop{\arg \max}_i {\hat y_i}$.
+
+The **multi-class hinge loss** is defined as:
+
+
+$$
+L_{hinge}(\hat y, y)=max(0, 1-(\hat y_t - \hat y_p))
+$$
+
+
+where $t$ is the correct class label and $p$ is the prediction class label with the highest score. The loss attempts to score the correct class above all other classes with a margin of at least 1.
+
+### Log Loss
+
+The log loss is a common variation of the hinge loss, which can be seen as a **soft version of the hinge loss** with an **infinite margin** (LeCun et al., 2006).
+
+Log loss for multi-class is defined as follows:
+
+
+$$
+L_{log}(\hat y, y)=\log(1+\exp(-(\hat y_t - \hat y_p)))
+$$
+
+
+where $t$ is the correct class label and $p$ is the prediction class label with the highest score. The loss attempts to score the correct class above all other classes as large as possible.
+
+### Negative Log Likelihood Loss
+
+Negative  log likelihood loss (**NLL**), also referred to **categorical cross-entropy loss**, is used when a **probabilistic** interpretation of the scores is desired.
+
+The negative log likelihood loss is very common in the neural networks literature, and produces a multi-class classifier which does not only predict the one-best class label but also predicts a distribution over the possible labels. The prediction distribution is achieved by transforming the output of network using softmax.
+
+#### Training example with probability label
+
+Let $y=y_1,y_2,\dots,y_k$ be a vector representing the true multinomial distribution $P(y)$ over the labels ($0 \leq y_{i} \leq 1$) and let $\hat y = {\hat y_1}, {\hat y_2}, \dots, {\hat y_k}$ be the network's output, which was transformed by the **softmax** activation function, and represent the class membership conditional distribution $\hat y_i = P(\hat y=i|x)$. The classification rule is: $prediction = \mathop{\arg \ max}_{i} {\hat y_i}$. 
+
+Negative  log likelihood loss is defined as follows:
+
+
+$$
+L_{NNL}(\hat y, y) = -\log(\prod_i^{k} {P(\hat y = i | x)}^{P(y=i)} )=-\log(\prod_i^{k} {\hat y_i}^{y_i} )= - \sum_{i}^{k} y_i \log(\hat y_i)
+$$
+
+
+Negative  log likelihood loss is also defined as **cross entropy** (so you know why we have an alias categorical cross-entropy loss for the loss) to measure the dissimilarity between the true label distribution $P(y)$ and the predicted label distribution $P(\hat y|x)$:
+
+
+$$
+L_{NNL}(\hat y, y) = - \sum_{i}^{k}P(y_i) \log(P(\hat y_i | x))= - \sum_{i}^{k} y_i \log(\hat y_i)
+$$
+
+
+#### Train example with hard label 
+
+A special case is for the **hard classification problems** in which each training example has a single correct
+class assignment, $y$ is a one-hot vector representing the true class, i.e., $y_{i} \in \{0, 1\} \; and \; \sum_i {y_i}=1$. The NNL loss is simplified to:
+
+
+$$
+L_{NNL}(\hat y, y)=-\log(\hat y_t)
+$$
+
+
+where $t$ is the index of the non-zero in the $\hat y$ vector, i.e., the correct class label.
+
+#### The relation with multi-class hinge loss 
+
+The multi-class hinge loss attempts to score the correct class above all other classes with a margin of at least 1; the negative log likelihood loss attempts to maximize the prediction probability for the correct label. Because the prediction is transformed from softmax, thus maximize the correct label means surpass the other incorrect labels.
+
+ ### Ranking Loss
+
+Image a situation, we have only positive examples $x$, and negative examples $x^{'}$ generated by corrupting a positive example, there is no hand-label for training examples. The goal of us to to score positive items above negative ones.
+
+The ranking loss based on the margin loss is defined as:
+
+
+$$
+L_{rank-margin}(x, x^{'})=\max(0, 1-(NN(x) - NN(x^{'})))
+$$
+
+
+The ranking loss based on log loss is defined as:
+
+
+$$
+L_{rank-log}(x, x^{'})=\log(1+\exp(-(NN(x) - NN(x^{'}))))
+$$
+
+
+Examples using the ranking hinge loss in language tasks include training with the auxiliary tasks used for deriving **pre-trained word embeddings**, in which we are given a correct word sequence and a corrupted word sequence, and our goal is to score the correct sequence above the corrupt one (Collobert & Weston, 2008).
 
