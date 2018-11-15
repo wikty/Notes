@@ -710,19 +710,83 @@ Besides the improved accuracy of the gradients estimation, the mini-batch algori
 
 The size of mini-batch is a hyperparameter. Higher values provide better estimates of the whole training set gradients, while smaller values allow more updates and in turn faster convergence.
 
+#### Variants of SGD
+
+The SGD+**Momentum** (Polyak, 1964) and **Nesterov Momentum** (Sutskever, Martens, Dahl, & Hinton, 2013) algorithms are variants of SGD in which previous **gradients are accumulated** and affect the current update.
+
+**Adaptive learning rate** algorithms including **AdaGrad** (Duchi, Hazan, & Singer, 2011), **AdaDelta** (Zeiler, 2012), **RMSProp** (Tieleman & Hinton, 2012) and **Adam** (Kingma & Ba, 2014) are designed to select the learning rate for each minibatch, sometimes on a per-coordinate basis, potentially alleviating the need of fiddling with learning rate scheduling.
+
+More see (Bengio et al., 2015).
+
 #### The converge of SGD
 
-With a small enough learning rate, SGD is guaranteed to converge to a global optimum if the function is convex. However, it can also be used to optimize non-convex functions such as neural-network. While there are no longer guarantees of finding a global optimum, the algorithm proved to be robust and performs well in practice.
-
-
+With a small enough learning rate, SGD is guaranteed to converge to a global optimum if the function is **convex***. However, it can also be used to optimize **non-convex** functions such as neural-network. While there are no longer guarantees of finding a global optimum, the algorithm proved to be robust and performs well in practice.
 
 ### Auto Differentiation
 
+#### Calculate gradients
+
+When training a neural network, the parameterized function $f$ is the neural network, and the **parameters** $\theta$ are the layer-transfer matrices, bias terms, embedding matrices and so on. The gradient computation is a key step in the SGD algorithm. 
+
+The question is, then, how to compute the **gradients** of the network's error with respect to the parameters. Fortunately, there is an easy solution in the form of the **backpropagation algorithm** (Rumelhart, Hinton, & Williams, 1986; Lecun, Bottou, Bengio, 1998b).
+
+More generally, the backpropagation algorithm is a special case of the **reverse-mode automatic differentiation** algorithm (Neidinger, 2010; Baydin, Pearlmutter, Radul, & Siskind, 2015; Bengio, 2012)
+
+#### Computation graph and Reverse mode differentiation
+
 Gradients can be efficiently and automatically computed using **reverse mode differentiation** on a **computation graph** - a general algorithmic framework for automatically computing the gradient of any network and loss function.
 
-#### Computation graph
+The computation-graph abstraction allows us to easily construct arbitrary networks, evaluate their predictions for given inputs (**forward pass**), and compute gradients for their parameters with respect to arbitrary scalar losses (**backward pass**). We can use software to build computation graph for our neural networks. Once the graph is built, it is straightforward to run either a forward computation (compute the result of the computation) or a backward computation (computing the gradients).
+
+**Forward pass**
+
+The forward pass computes the outputs of the nodes in the
+graph. Since each node's output depends only on itself and on its incoming edges, it is
+trivial to compute the outputs of all nodes by traversing the nodes in a topological order and
+computing the output of each node given the already computed outputs of its predecessors.
+
+**Backward pass**
+
+The backward pass begins by designating a node with **scalar output as a loss-node**, and running forward computation up to that node. 
+
+For further information on automatic differentiation see (Neidinger, 2010, Section 7),
+(Baydin et al., 2015). For more in depth discussion of the backpropagation algorithm and
+computation graphs (also called  ow graphs) see (Bengio et al., 2015, Section 6.4), (Lecun
+et al., 1998b; Bengio, 2012). For a popular yet technical presentation, see Chris Olah's
+description at http://colah.github.io/posts/2015-08-Backprop/.
+
+#### Softwares
+
+Theano involves an optimizing compiler for computation graphs, which is both a blessing
+and a curse. On the one hand, once compiled, large graphs can be run eciently on either
+the CPU or a GPU, making it ideal for large graphs with a xed structure, where only the
+inputs change between instances. However, the compilation step itself can be costly, and it
+makes the interface a bit cumbersome to work with. In contrast, the other packages focus on
+building large and dynamic computation graphs and executing them \on the 
+y" without a
+compilation step. While the execution speed may suer with respect to Theano's optimized
+version, these packages are especially convenient when working with the recurrent and recursive networks.
+
+#### Advantages
+
+As long as the network's output is a vector , it
+is trivial to compose networks by making the output of one network the input of another,
+creating arbitrary networks. The computation graph abstractions makes this ability explicit:
+a node in the computation graph can itself be a computation graph with a designated output
+node. One can then design arbitrarily deep and complex networks, and be able to easily
+evaluate and train them thanks to automatic forward and gradient computation.
+
+### Training  Recipe
+
+![](training-recipe.jpg)
+
+Here, `build_computation_graph` is a user-dened function that builds the computation
+graph for the given input, output and network structure, returning a single loss node.
+update parameters is an optimizer speficic update rule. The recipe spefcies that a new
+graph is created for each training example. This accommodates cases in which the network
+structure varies between training example, such as recurrent and recursive neural networks. For networks with fixed structures, such as an MLPs, it may be more effcient to create one base computation graph and vary only the inputs and expected outputs between examples.
 
 
 
-#### Reverse mode differentiation
+32
 
