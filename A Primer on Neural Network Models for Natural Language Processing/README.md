@@ -716,8 +716,6 @@ The SGD+**Momentum** (Polyak, 1964) and **Nesterov Momentum** (Sutskever, Marten
 
 **Adaptive learning rate** algorithms including **AdaGrad** (Duchi, Hazan, & Singer, 2011), **AdaDelta** (Zeiler, 2012), **RMSProp** (Tieleman & Hinton, 2012) and **Adam** (Kingma & Ba, 2014) are designed to select the learning rate for each minibatch, sometimes on a per-coordinate basis, potentially alleviating the need of fiddling with learning rate scheduling.
 
-More see (Bengio et al., 2015).
-
 #### The converge of SGD
 
 With a small enough learning rate, SGD is guaranteed to converge to a global optimum if the function is **convex***. However, it can also be used to optimize **non-convex** functions such as neural-network. While there are no longer guarantees of finding a global optimum, the algorithm proved to be robust and performs well in practice.
@@ -786,7 +784,465 @@ update parameters is an optimizer speficic update rule. The recipe spefcies th
 graph is created for each training example. This accommodates cases in which the network
 structure varies between training example, such as recurrent and recursive neural networks. For networks with fixed structures, such as an MLPs, it may be more effcient to create one base computation graph and vary only the inputs and expected outputs between examples.
 
+For further discussion on optimization techniques and algorithms for neural networks, refer
+to (Bengio et al., 2015, Chapter 8). For some theoretical discussion and analysis, refer to (Glorot & Bengio, 2010). For various practical tips and recommendations, see (LeCun et al., 1998a; Bottou, 2012).
+
+## Optimization
+
+### Parameters Initialization
+
+The **non-convexity** of the loss function means the optimization procedure
+may **get stuck in a local minimum or a saddle point**, and that starting from **different initial**
+points (e.g. different random values for the parameters) may result in **different results**. Thus,
+it is advised to run several restarts of the training starting at different random initializations,
+and choosing the best one based on a development set.
+
+The magnitude of the random values has an important effect on the success of training.
+An effective scheme due to Glorot and Bengio (2010), called **xavier initialization**, initializing a weight matrix $W \in \R ^{d_{in} \times d_{out}}$ as:
 
 
-32
+$$
+W \sim {Uniform} \left[ -\frac{\sqrt 6}{\sqrt {d_{in} + d_{out}}}, +\frac{\sqrt 6}{\sqrt {d_{in} + d_{out}}} \right]
+$$
+
+
+Analysis by He et al (2015) suggests that when using **ReLU non-linearities**, the weights
+should be initialized by sampling from a zero-mean Gaussian distribution whose standard
+deviation is $\sqrt {\frac{2}{d_{in}}}$,  initializing a weight matrix $W \in \R ^{d_{in} \times d_{out}}$ as:
+
+
+$$
+W \sim Guassian(0, I\sqrt {\frac{2}{d_{in}}})
+$$
+
+
+This initialization method is better than xavier initialization in an image classication task, especially when deep networks were involved.
+
+### Learning rate scheduling
+
+Too large learning rates will prevent the network from converging on an effective solution. Too small learning rates will take very long time to converge.
+
+We can experiment with a range of initial learning rates in range [0; 1], e.g. 0.001, 0.01, 0.1, 1. Monitor
+the network's loss over time, and decrease the learning rate once the network seem to be stuck in a fixed region.
+
+We can also use learning rate scheduling. Learning rate scheduling decrease the rate as a function of the number of observed mini-batches. A common schedule is dividing the initial learning rate by the iteration number. 
+
+Leon Bottou (2012) recommends using a learning rate of the form:
+
+
+$$
+\eta ^ {t} = \frac{\eta ^ 0}{1+t \eta ^ 0 \lambda}
+$$
+
+
+### Mini-batch
+
+Large minibatched training can be benefcfical in terms of computation effciency on specialized computing architectures such as GPUs.
+
+### Vanishing and Exploding Gradients
+
+In deep networks, it is common for the error
+gradients to either vanish (become exceedingly close to 0) or explode (become exceedingly
+high) as they propagate back through the computation graph. The problem becomes more
+severe in deeper networks, and especially so in recursive and recurrent networks (Pascanu,
+Mikolov, & Bengio, 2012). 
+
+Dealing with the **vanishing gradients** problem is still an open
+research question. Solutions include making **the networks shallower**, **step-wise training** (first
+train the first layers based on some auxiliary output signal, then fix them and train the upper
+layers of the complete network based on the real task signal), or **specialized architectures**
+that are designed to assist in gradient flow (e.g., the LSTM and GRU architectures for recurrent networks).
+
+Dealing with the **exploding gradients** has a simple but very effective solution: clipping the gradients if their norm exceeds a given threshold. Pascanu et al (2012) suggest to set:
+
+
+$$
+\hat g \leftarrow \frac{threshold}{||\hat g||} {\hat g} \qquad if \; ||\hat g||>threshold
+$$
+
+
+where $\hat g$ is the gradients of all parameters in the network.
+
+### Saturated and Dead
+
+Layers with **tanh** and **sigmoid** activations can become **saturated** - resulting in output values for that layer that are all close to one, the upper-limit of the activation function. Saturated neurons have very small gradients, and should be avoided.
+
+Saturated neurons are caused by **too large values** entering the layer. This may be controlled for by changing the initialization, scaling the range of the input values, or changing the learning rate.
+
+For saturated layers, another option is to normalize the values in the saturated layer after the activation, i.e. instead of $\tanh (h)$ using $\frac{tanh(h)}{||tanh(h)||}$.
+
+Layers with the **ReLU** activation cannot be saturated, but can **die** most or all values are negative and thus clipped at zero for all inputs, resulting in a gradient of zero for that layer.
+
+Dead neurons are caused by all weights entering the layer being negative (for example this can happen after a large gradient update). Reducing the learning rate will help in this situation.
+
+## Regularization
+
+Neural network models have many parameters, and overtting can easily occur. Overtting
+can be alleviated to some extent by regularization.
+
+A common regularization method is $L_2$ regularization, placing a squared penalty on parameters with large values by adding an additive $\frac{\lambda}{2}||\theta||$ term to the objective function to be minimized, where the $\lambda$ is a hyperparameter for controlling regularization.
+
+A recently proposed alternative regularization method is **dropout** (Hinton, Srivastava,
+Krizhevsky, Sutskever, & Salakhutdinov, 2012). The dropout method is designed to prevent
+the network from learning to rely on specic weights. It works by randomly dropping (setting
+to 0) half of the neurons in the network (or in a specic layer) in each training example.
+
+Work by Wager et al (2013) establishes a strong connection between the dropout method and $L_2$ regularization.Gal and Gharamani (2015) show that a multi-layer perceptron with dropout applied at every layer can be interpreted as Bayesian model averaging. 
+
+## Model Cascading and Multi-task Learning
+
+### Model Cascading
+
+Model cascading is a powerful technique in which large networks are built by composing
+them out of smaller component networks. For example, we may have a feed-forward network
+for predicting the part of speech of a word based on its neighbouring words and/or the
+characters that compose it. In a pipeline approach, we would use this network for predicting
+parts of speech, and then feed the predictions as input features to neural network that does
+syntactic chunking or parsing. Instead, we could think of the hidden layers of this network
+as an encoding that captures the relevant information for predicting the part of speech. In
+a cascading approach, we take the hidden layers of this network and connect them (and not
+the part of speech prediction themselves) as the inputs for the syntactic network. We now
+have a larger network that takes as input sequences of words and characters, and outputs a
+syntactic structure. The computation graph abstraction allows us to easily propagate the
+error gradients from the syntactic task loss all the way back to the characters.
+To combat the vanishing gradient problem of deep networks, as well as to make better
+use of available training material, the individual component network's parameters can be
+bootstrapped by training them separately on a relevant task, before plugging them in to
+the larger network for further tuning. For example, the part-of-speech predicting network
+can be trained to accurately predict parts-of-speech on a relatively large annotated corpus,
+before plugging its hidden layer into the syntactic parsing network for which less training
+data is available. In case the training data provide direct supervision for both tasks, we can
+make use of it during training by creating a network with two outputs, one for each task,
+computing a separate loss for each output, and then summing the losses into a single node
+from which we backpropagate the error gradients.
+Model cascading is very common when using convolutional, recursive and recurrent
+neural networks, where, for example, a recurrent network is used to encode a sentence into
+a xed sized vector, which is then used as the input of another network. The supervision
+signal of the recurrent network comes primarily from the upper network that consumes the
+recurrent network's output as it inputs.
+
+### Multi-task Learning
+
+Multi-task learning is used when we have related prediction tasks that do not necessarily
+feed into one another, but we do believe that information that is useful for one type
+of prediction can be useful also to some of the other tasks. For example, chunking, named
+entity recognition (NER) and language modeling are examples of synergistic tasks. Information
+for predicting chunk boundaries, named-entity boundaries and the next word in the
+sentence all rely on some shared underlying syntactic-semantic representation. Instead of
+training a separate network for each task, we can create a single network with several outputs.
+A common approach is to have a multi-layer feed-forward network, whose final hidden
+layer (or a concatenation of all hidden layers) is then passed to different output layers. This
+way, most of the parameters of the network are shared between the different tasks. Useful
+information learned from one task can then help to disambiguate other tasks. Again, the
+computation graph abstraction makes it very easy to construct such networks and compute
+the gradients for them, by computing a separate loss for each available supervision signal,
+and then summing the losses into a single loss that is used for computing the gradients. In
+case we have several corpora, each with different kind of supervision signal (e.g. we have
+one corpus for NER and another for chunking), the training procedure will shuffle all of the
+available training example, performing gradient computation and updates with respect to
+a different loss in every turn. Multi-task learning in the context of language-processing is
+introduced and discussed in (Collobert et al., 2011).
+
+## Structured Output Prediction
+
+Many problems in NLP involve structured outputs: cases where the desired output is not
+a class label or distribution over class labels, but a structured object such as a **sequence**,
+a **tree** or a **graph**. Canonical examples are sequence tagging (e.g. part-of-speech tagging)
+sequence segmentation (chunking, NER), and syntactic parsing.
+
+### Greedy Structured Prediction
+
+The greedy approach to structured prediction is to decompose the structure prediction
+problem into a sequence of local prediction problems and training a classier to perform
+each local decision. At test time, the trained classfier is used in a greedy manner.
+
+Examples of this approach are left-to-right tagging models (Gimenez & Marquez, 2004) and greedy
+transition-based parsing (Nivre, 2008). Such approaches are easily adapted to use neural
+networks by simply replacing the local classier from a linear classier such as an SVM or a
+logistic regression model to a neural network, as demonstrated in (Chen & Manning, 2014;
+Lewis & Steedman, 2014).
+
+The greedy approaches suer from error propagation, where mistakes in early decisions
+carry over and in
+uence later decisions. The overall higher accuracy achievable with nonlinear
+neural network classiers helps in offsetting this problem to some extent. In addition,
+training techniques were proposed for mitigating the error propagation problem by either
+attempting to take easier predictions before harder ones (the easy-rst approach (Goldberg
+& Elhadad, 2010)) or making training conditions more similar to testing conditions by
+exposing the training procedure to inputs that result from likely mistakes (Hal Daume III,
+Langford, & Marcu, 2009; Goldberg & Nivre, 2013). These are effective also for training
+greedy neural network models, as demonstrated by Ma et al (Ma, Zhang, & Zhu, 2014)
+(easy-rst tagger) and (?) (dynamic oracle training for greedy dependency parsing).
+
+### Search Based Structured Prediction
+
+The common approach to predicting natural language structures is **search based**. For indepth
+discussion of search-based structure prediction in NLP, see the book by Smith (Smith,
+2011). In the neural-networks literature, such models were discussed under the framework of **energy based** learning (LeCun et al., 2006).
+
+Search-based structured prediction is formulated as a search problem over possible structures:
+
+
+$$
+\hat y = predict(x) = \mathop{\arg\max}_{y \in Y(x)} score(x, y)
+$$
+
+
+where $x$ is an input structure, $y$ is an output over $x$ (in a typical example $x$ is a sentence and $y$ is a tag-assignment or a parse-tree over the sentence), $Y(x)$ is the set of all valid output structures over $x$.
+
+The scoring function is defined as a linear model:
+
+
+$$
+score(x,y)=w \cdot \Phi(x,y)
+$$
+
+
+where $\Phi(x,y)$ is a feature extraction function and $w$ is a weight vector.
+
+In order to make the search for the optimal y tractable, the structure $y$ is decomposed
+into parts, and the feature function is defined in terms of the parts, where $\phi(y)$ is a part-local
+feature extraction function:
+
+
+$$
+\Phi(x,y)=\sum_{p \in parts(x,y)} {\phi(p)}
+$$
+
+
+Each part is scored separately, and the structure score is the sum of the component
+parts scores:
+
+
+$$
+score(x,y)=\sum_{p}w \cdot \phi(p)=\sum_{p} {score(p)}
+$$
+
+
+The decomposition of $y$ into parts is such that there exists an inference algorithm that allows for effcient search for the best scoring structure given the scores of the individual parts. We can now trivially replace the scoring function over parts with a neural network:
+
+
+$$
+score(x,y)=\sum_{p} {score(p)}=\sum_{p} {NN(c(p))}
+$$
+
+
+where $c(p)$ is used to map the parts into neural network input.
+
+So the prediction as follows:
+
+
+$$
+\hat y = predict(x) = \mathop{\arg\max}_{y \in Y(x)} score(x, y)= \mathop{\arg\max}_{y \in Y(x);\; p \in parts(x,y)} {\sum_{p}NN(c(p))}
+$$
+
+
+A common objective in structured prediction is making the gold structure $y$ score higher than any other structure $y^{'}$, leading to the following **generalized perceptron loss**:
+
+
+$$
+\max_{y^{'}} (score(x, y^{'})-score(x,y))
+$$
+
+
+As argued in (LeCun et al., 2006, Section 5), the generalized perceptron loss may not
+be a good loss function when training structured prediction neural networks as it does not
+have a margin, and a **margin-based hinge loss** is preferred:
+
+
+$$
+max(0, m+score(x,y)-\max_{y^{'}}score(x,y^{'}))
+$$
+
+
+#### CRF
+
+![](CRF-structured-prediction-learning.jpg)
+
+#### Reranking
+
+When searching over all possible structures is intractable, ineffcient or hard
+to integrate into a model, reranking methods are often used. In the reranking framework
+(Charniak & Johnson, 2005; Collins & Koo, 2005) a base model is used to produce a list of the k-best scoring structures. A more complex model is then trained to score the
+candidates in the k-best list such that the best structure with respect to the gold one is
+scored highest.
+
+Works using the reranking
+approach include (Socher et al., 2013; Auli et al., 2013; Le & Zuidema, 2014; Zhu et al.,
+2015a)
+
+#### MEMM
+
+Other formulations are, of course, also possible. For
+example, an MEMM (McCallum, Freitag, & Pereira, 2000) can be trivially adapted to the
+neural network world by replacing the logistic regression (\Maximum Entropy") component
+with an MLP.
+
+#### Hybrid approaches
+
+Hybrid approaches between neural networks and linear models are also explored. In
+particular, Weiss et al (Weiss et al., 2015) report strong results for transition-based dependency
+parsing in a two-stage model.
+
+## Convolutional Layers
+
+### Motivation
+
+Sometimes we are interested in making predictions based on ordered sets of items (e.g. the sequence of words in a sentence, the sequence of sentences in a document and so on). Some of the sentence words are very informative of the sentiment, other words are less informative, and to a good approximation, an **informative clue is informative regardless of its position in the sentence**. We would like to feed all of the sentence words into a learner, and let the training process figure out the important clues.
+
+Some solutions as follow:
+
+* One possible solution is
+  feeding a **CBOW representation** into a fully connected network such as an MLP. However,
+  a downside of the CBOW approach is that it ignores the ordering information completely,
+  assigning the sentences "it was not good, it was actually quite bad" and "it was not bad,
+  it was actually quite good" the exact same representation.
+* A naive approach would suggest embedding word-pairs (bi-grams) rather
+  than words, and building a CBOW over the **embedded bigrams**. While such architecture
+  could be effective, it will result in huge embedding matrices, will not scale for longer n-grams,
+  and will suffer from data sparsity problems as it does not share statistical strength
+  between different n-grams.
+
+Convolutional solution:
+
+The convolution-and-pooling (also called convolutional neural networks, or CNNs) architecture
+is an elegant and robust solution to this modeling problem. A convolutional neural network
+is designed to **identify indicative local predictors in a large structure**, and combine them
+to **produce a fixed size vector representation of the structure**, capturing these local aspects
+that are most informative for the prediction task at hand.
+
+When applied to images, the architecture is using **2-dimensional (grid) convolutions**. When applied to text, NLP we are mainly concerned with **1-d (sequence) convolutions**. Convolutional networks were introduced to the NLP community in the pioneering work of Collobert, Weston and Colleagues (2011) who used them for semantic-role labeling, and later by Kalchbrenner et al (2014) and Kim (Kim, 2014) who
+used them for sentiment and question-type classication.
+
+### Convolution and Pooling
+
+The main idea behind a **convolution** for language tasks is to apply a non-linear (learned) function (also called **filter**) over each instantiation of a k-words sliding window over the sentence. This filter transforms a window of **k-words** into a **d-dimensional vector** that captures important properties of the words in the window, and each dimension is sometimes referred as **channel**. Intuitively, when the sliding window is run over a sequence, the filter function learns to **identify informative k-grams**.
+
+Then, a **pooling** operation is used combine the vectors resulting from the different windows into **a single d-dimensional vector**, by taking the max or the average value observed in each of the d-channels over the different windows. The intention is to focus on the most important "features" in the sentence, **regardless of their location**.
+
+Finally, the d-dimensional vector is fed further into a network that is used for prediction. The **gradients** that are propagated back from the network's loss during the training process are used to **tune the parameters of the filter function to highlight the aspects of the data that are important for the task** the network is trained for.
+
+More formally, consider a sequence of words $x=x_1,x_2,\dots,x_n$, each with their corresponding word embedding vector $v(x_i)$, and assuming there are $m$ windows in total. The convolution and pooling as follows:
+
+**word to vector**: Concatenate the word embedding vectors of k-words for the i-th sliding window
+
+
+$$
+w_i=[v(x_i);v(x_{i+1});\dots;v(x_{i+k-1})]
+$$
+
+
+**convolution**: Apply the non-linear learnable filter function for the sliding window to get d-dimensional vector that captures important properties of the words in the window
+
+
+$$
+p_i=\alpha(w_iW+b)
+$$
+
+
+
+
+**pooling**: Apply max pooling for each channel of all sliding windows vectors to get a single d-dimensional vector that to get the most salient information across window positions. Ideally, each dimension will "specialize" in a particular sort of predictors, and max operation will pick on the most important predictor of each type. Each dimension of the output vector will be extracted as follows:
+
+
+$$
+c_j=\max_{1 \leq i \leq m} p_i
+$$
+
+
+Now we have a d-dimensional vector $c$ that is a representation of the sentence in which each dimension
+reflects the most salient information with respect to some prediction task. c is then fed
+into a downstream network layers, perhaps in parallel to other vectors, culminating in an
+output layer which is used for prediction. The training procedure of the network calculates
+the loss with respect to the prediction task, and the error gradients are propagated all the
+way back through the pooling and convolution layers, as well as the embedding layers.
+
+![](basic-conv-pooling-for-nlp.jpg)
+
+### Variations
+
+#### group pooling
+
+Rather than performing a single pooling operation over the entire sequence, we may want
+to **retain some positional information** based on our **domain understanding** of the prediction
+problem at hand.
+
+We can split the convolutional vectors $p_i$ into $\ell$ distinct groups, apply the pooling separately on each group, and then concatenate the resulting vectors $c_1,c_2,\dots,c_{\ell}$. The division of the $p_i$ vectors into groups is performed based on domain knowledge.
+
+For example, Johnson and Zhang (Johnson
+& Zhang, 2014) found that when classifying documents into topics, it is useful to have 20
+average-pooling regions, clearly separating the initial sentences (where the topic is usually
+introduced) from later ones, while for a sentiment classication task a single max-pooling
+operation over the entire sentence was optimal (suggesting that one or two very strong
+signals are enough to determine the sentiment, regardless of the position in the sentence).
+
+Similarly, in a relation extraction kind of task we may be given two words and asked to
+determine the relation between them. We could argue that the words before the first word,
+the words after the second word, and the words between them provide three different kinds
+of information (Chen et al., 2015). So we can split $p_i$ accordingly, pooling
+separately the windows resulting from each group.
+
+#### hierarchical convolution and pooling
+
+We have a succession of convolution and pooling layers, where each stage applies a convolution to a sequence, pools every k neighboring vectors, performs a convolution on the resulting pooled sequence,
+applies another convolution and so on. This architecture allows sensitivity to increasingly
+larger structures.
+
+#### k-max pooling
+
+(Kalchbrenner et al., 2014) introduced a k-max pooling operation, in which the
+top k values in each dimension are retained instead of only the best one, while preserving
+the order in which they appeared in the text.
+
+The k-max pooling operation makes it possible to pool the k most active indicators that
+may be a number of positions apart; it preserves the order of the features, but is insensitive
+to their specic positions. It can also discern more nely the number of times the feature
+is highly activated (Kalchbrenner et al., 2014).
+
+#### multi-convolutional layers
+
+Rather than a single convolutional layer, several convolutional layers may be applied in
+parallel. For example, we may have four different convolutional layers, each with a different
+window size in the range 2-5, capturing n-gram sequences of varying lengths. The result
+of each convolutional layer will then be pooled, and the resulting vectors concatenated and
+fed to further processing (Kim, 2014).
+
+#### non-sequence convolution
+
+The convolutional architecture need not be restricted into the linear ordering of a sentence.
+For example, Ma et al (2015) generalize the convolution operation to work over
+syntactic dependency trees. There, each window is around a node in the syntactic tree,
+and the pooling is performed over the dierent nodes. Similarly, Liu et al (2015) apply a
+convolutional architecture on top of dependency paths extracted from dependency trees. Le
+and Zuidema (2015) propose to perform max pooling over vectors representing the dierent
+derivations leading to the same chart item in a chart parser.
+
+# Recurrent Neural Networks
+
+## Motivation
+
+When dealing with language data, it is very common to work with **arbitrary length sequences**, such as words (sequences of letters), sentences (sequences of words) and documents (sequences of sentences).
+
+How can we encode arbitrary length sequences as **fixed sized vectors**, while keep the structured properties of the input?
+
+* CBoW
+
+  CBOW representations allows to encode arbitrary length sequences as fixed sized vectors. However,
+  the CBOW representation is quite limited, and forces one to disregard the order of features.
+
+* Convolutional networks
+
+  The convolutional networks allow encoding a sequence into a fixed size vector.
+  While representations derived from convolutional networks are an improvement above the
+  CBOW representation as they offer some sensitivity to word order, their order sensitivity is
+  restricted to mostly local patterns, and disregards the order of patterns that are far apart
+  in the sequence.
+
+* Recurrent networks
+
+  Recurrent neural networks (RNNs) (Elman, 1990) allow representing arbitrarily sized
+  structured inputs in a fixed-size vector, while paying attention to the structured properties
+  of the input.
+
+
 
