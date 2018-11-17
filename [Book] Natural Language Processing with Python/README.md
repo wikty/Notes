@@ -1,4 +1,3 @@
----
 title: "NLTK - 自然语言处理库"
 date: 2017-01-12T14:17:00+08:00
 draft: false
@@ -7,196 +6,265 @@ tags: ["nlp", "nltk", "python"]
 featured_img: ""
 description: ""
 page_header: ""
----
 
-# 概要
+[TOC]
+
+# Chapter 0: Preface
 
 ## 自然语言处理
 
-自然语言是经过一代一代人类传承的、用于交流沟通的语言，是不同于编程语言、数学公式这类人造语言的。自然语言处理（Natural Language Processing，简称[NLP](https://en.wikipedia.org/wiki/Natural_language_processing)，又被称为Computational Linguistics）是涉及甚广的技术，在手写体识别、信息检索、机器翻译、文本挖掘都发挥着重要的作用。
+自然语言是经过一代一代人类传承的、用于交流沟通的语言，是不同于编程语言、数学公式这类人造语言的。自然语言处理（Natural Language Processing，简称 [NLP](https://en.wikipedia.org/wiki/Natural_language_processing)，又被称为 Computational Linguistics）是涉及甚广的技术，在手写体识别、信息检索、机器翻译、文本挖掘都发挥着重要的作用。
 
-## Python跟自然语言处理
+>  By "natural language" we mean a language that is used for everyday communication by humans; languages like English, Hindi or Portuguese. In contrast to artificial languages such as programming languages and mathematical notations, natural languages have evolved as they pass from generation to generation, and are hard to pin down with explicit rules. 
+>
+> We will take Natural Language Processing — or NLP for short — in a wide sense to cover any kind of computer manipulation of natural language.
 
-基于Python的第三方库Natural Language Toolkit（简称[NLTK](http://nltk.org)），提供了自然语言处理所需的常用工具以及丰富的语料数据等。NLTK对常见的自然语言处理任务，比如词性标注、语义分析、文本分类等，都提供了支持。本文主要基于NLTK[官方教程](http://www.nltk.org/book)而写。
+研究自然语言处理的最终目的是，使机器可以理解自然语言的含义，构建人类和机器之间的自然语言交互接口。
 
-### NLTK使用简介
+> By providing more natural human-machine interfaces, and more sophisticated access to stored information, language processing has come to play a central role in the multilingual information society.
 
-0. 安装Python 3.2+
+## 用 Python 处理自然语言
 
-1. 安装NLTK 3.0
+基于 Python 的第三方库 Natural Language Toolkit（简称 [NLTK](http://nltk.org)），提供了自然语言处理所需的常用工具以及丰富的语料数据等。NLTK 对常见的自然语言处理任务，比如词性标注、语义分析、文本分类等，都提供了支持。本文主要基于 NLTK [官方教程](http://www.nltk.org/book)而写。
 
-   	pip install nltk
+Why Python?
 
-2. 下载NLTK资源数据
+> We chose Python because it has a shallow learning curve, its syntax and semantics are transparent, and it has good string-handling functionality. As an interpreted language, Python facilitates interactive exploration. As an object-oriented language, Python permits data and methods to be encapsulated and re-used easily. As a dynamic language, Python permits attributes to be added to objects on the fly, and permits variables to be typed dynamically, facilitating rapid development. Python comes with an extensive standard library, including components for graphical programming, numerical processing, and web connectivity.
 
-   ```python
+Why NLTK?
+
+> NLTK defines an infrastructure that can be used to build NLP programs in Python. It provides basic classes for representing data relevant to natural language processing; standard interfaces for performing tasks such as part-of-speech tagging, syntactic parsing, and text classification; and standard implementations for each task which can be combined to solve complex problems.
+
+## NLTK 使用简介
+
+### 安装
+
+0. 安装 Python 3.2+
+
+1. 安装 NLTK 3.0
+
+    ```
+    pip install nltk
+    ```
+
+2. 下载 NLTK 资源数据
+
+   ```
    import nltk
    nltk.download()
    ```
-   输入以上命令后会弹出一个下载管理器，可以用它来下载自己需要的数据，为了运行NLTK官方教程中提供的样例，需要下载`book`数据：![](nltk_downloader_book.png)
 
-   测试`book`数据是否安装成功：
+   输入以上命令后会弹出一个下载管理器，可以用它来下载自己需要的数据，为了运行 NLTK book 官方教程中提供的样例，需要下载 `book` 数据集：![](nltk_downloader_book.png)
 
-   ```python
-   from nltk import book
-   ```
+   测试 `book` 数据是否安装成功：`from nltk import book`
 
-3. 安装相关第三方库
+3. 安装相关第三方库 Numpy 和 Matplotlib
 
-   	# 科学计算库
-   	pip install numpy
-   	# 二维图像绘制
-   	pip install matplotlib
-   	# 安装斯坦福大学的NLP库，NLTK可以调用该库
-   	详见：http://nlp.stanford.edu/software/
+    ```
+    pip install numpy
+    pip install matplotlib
+    ```
+4. 安装斯坦福大学的 NLP库，NLTK 可以调用该库，详见：http://nlp.stanford.edu/software/
 
-### NLTK模块介绍
 
-| 模块                     | 功能                                |
-| ---------------------- | --------------------------------- |
-| corpus                 | 访问语料库和词典的标准化接口                    |
-| tokenize, stem         | 分词以及解析词干                          |
-| collocations           | 查找固定                              |
-| tag                    | 词性标注                              |
-| classify, cluster, tbl | 机器学习方法：决策树，最大熵，朴素贝叶斯，EM算法，K-Mean等 |
-| chunk                  | 用于发现命名实体                          |
-| parse, ccg             | 解析                                |
-| sem, inference         | 语义                                |
-| metrics                | 模型评估的度量方法                         |
-| probability            | 概率统计相关工具                          |
-| app, chat              | 小程序                               |
-| toolbox                | 语言学相关工具                           |
+### NLTK 模块概览
 
-### NLTK能用来做哪些工作
+| 模块                   | 功能                                                         |
+| ---------------------- | ------------------------------------------------------------ |
+| corpus                 | 访问语料库（corpus）和词典（lexicon）的标准化接口            |
+| tokenize, stem         | 分词（tokenize），句子切分（sentence tokenize）以及解析词干（stem） |
+| collocations           | 查找固定搭配（collocation）；支持 t-test，chi-squared, mutual information 等各种方法； |
+| tag                    | 词性标注（part-of-speech tagging）；支持 n-gram, backoff, HMM 等各种方法； |
+| classify, cluster, tbl | 常用机器学习方法：决策树，最大熵，朴素贝叶斯，EM算法，K-Mean 等 |
+| chunk                  | 用于命名实体识别、名词短语识别等 Chunking 任务               |
+| parse, ccg             | 句法解析（syntactic parsing）                                |
+| sem, inference         | 语义分析（semantic analysis）                                |
+| metrics                | 模型评估的度量方法，如 precision, recall 等                  |
+| probability            | 统计概率估计相关工具                                         |
+| app, chat              | 小程序                                                       |
+| toolbox                | 语言学相关工具                                               |
 
-NLTK的目标是提供一个简单、一致、易扩展易模块化的自然语言处理工具包。可以用NLTK提供的工具包轻易的处理很多常见的自然语言处理任务，但是这些实现并没有经过深入的优化，没有采用复杂的算法和底层语言去实现，因此如果对性能要求较高或者需要处理特殊的自然语言处理任务，就不建议使用NLTK来完成。
+### NLTK 能用来做哪些工作
 
-### NLTK初识
+NLTK 的目标是提供一个简单、一致、易扩展易模块化的自然语言处理工具包。可以用 NLTK 提供的工具包轻易的处理很多常见的自然语言处理任务，但是这些实现并没有经过深入的优化，没有采用复杂的算法和底层语言去实现，因此如果对性能要求较高或者需要处理特殊的自然语言处理任务，就不建议使用 NLTK 来完成。
+
+NLTK 的设计哲学：
+
+> Simplicity: To provide an intuitive framework along with substantial building blocks, giving users a practical knowledge of NLP without getting bogged down in the tedious house-keeping usually associated with processing annotated language data
+> Consistency:	To provide a uniform framework with consistent interfaces and data structures, and easily-guessable method names
+> Extensibility:	To provide a structure into which new software modules can be easily accommodated, including alternative implementations and competing approaches to the same task
+> Modularity:	To provide components that can be used independently without needing to understand the rest of the toolkit
+
+# Chapter 1: Language Processing and Python
+
+Here we will treat text as **raw data** for the programs we write, programs that manipulate and analyze it in a variety of interesting ways.
+
+## NLTK 初识
+
+首先需要下载 `nltk.book` 数据集，并导入它：
 
 ```python
 # 导入数据，数据都被封装成对象来使用的
-# 导入后将有text1,text2,..,text9等对象供使用
+# 导入后将有 text1,text2,..,text9 等对象供使用
+import nltk
 from nltk.book import *
-# 查看单词上下文环境，即提取单词所在句子
-# 可以看到单词搭配的左邻词和右邻词比较固定
-text1.concordance('monstrous')
-# 查找具有相似上下文环境的单词
-text1.similar('monstrous')
-# 查找多个单词共同的上下文环境
-text1.commo_contexts(['monstrous', 'very'])
-# 单词在文本中出现位置的图表
-# text4是按年份组织的美国总统就职演说文本，
-# 因此以下单词位置可以体现用词习惯随时间的变化
-# Google的用词频率统计服务 https://books.google.com/ngrams
-text4.dispersion_plot(["citizens", "democracy", "freedom", "duties", "America"])
-# 统计文本的token数目
-# 所谓token就是一个字符序列，该字符序列如何划定边界是比较复杂的逻辑，
-# 简单来说可以用空格、标点符号等来为token定界
-len(text1)
-# 统计文本词汇表大小
-# 即统计各不相同的token数目
-len(set(text1))
-# 统计文本中词汇多样性
-len(set(text1)) / len(text1)
-# 统计单词在文本中的频率
-text1.count('mouse') / len(text1)
-
 ```
 
+查看单词所在上下文环境（context）：
 
+```python
+# 查看单词上下文环境（context），即提取单词所在句子
+# 可以看到单词搭配的左邻词和右邻词比较固定
+# A concordance permits us to see words in context. 
+text1.concordance('monstrous')
 
+# 查找具有相似上下文环境的单词
+# What other words appear in a similar range of contexts?
+text1.similar('monstrous')
 
+# 查找多个单词共同的上下文环境
+# to examine just the contexts that are shared by two or more words
+text1.commo_contexts(['monstrous', 'very'])
+```
+
+查看单词出现在文本中的位置，即绘制 dispersion plot：
+
+```python
+# 单词在文本中出现位置的图表 
+# text4 是按年份组织的美国总统就职演说文本，
+# 因此以下单词位置可以体现用词习惯随时间的变化
+# Google 的用词频率统计服务 https://books.google.com/ngrams
+text4.dispersion_plot(["citizens", "democracy", "freedom", "duties", "America"])
+```
+
+对文本进行词表（vocabulary）统计：
+
+```python
+# The vocabulary of a text is just the *set* of tokens that it uses.
+
+# 统计文本的 token 数目，又被称为 word token 或 item token
+# 所谓 token 就是一个字符序列，该字符序列如何划定边界是比较复杂的逻辑，
+# 简单来说在英语中可以用空格、标点符号等来为 token 定界
+len(text1)
+
+# 统计文本词汇表大小
+# 即统计各不相同的 token 数目，又被称为 word type 或 item type
+len(set(text1))
+
+# 统计文本中词汇多样性 lexical diversity
+len(set(text1)) / len(text1)
+
+# 统计单词在文本中的频率 
+text1.count('mouse') / len(text1)
+```
+
+## 对文本进行简单的统计
 
 ### Frequency Distribution 单词的频率分布
 
+如何识别出文本中最具信息量的词汇？现在姑且假设，出现次数多的词汇，所含信息量也大（真的是这样吗？）。
+
+> How can we automatically identify the words of a text that are most informative about the topic and genre of the text? Imagine how you might go about finding the 50 most frequent words of a book. 
+
+我们需要构建一个词频统计表：
+
 It tells us the frequency of each vocabulary item in the text. It is a "distribution" because it tells us how the total number of word tokens in the text are distributed across the vocabulary items.
 
-文本中单词的总次数在所有词汇项上的分布次数
+用 NLTK 构建频率分布 : 
 
-NLTK provides built-in support for frequency distribution: 
+```python
+# distribution of word
+fd = FreqDist(text1)
+# how many times does 'house' appear in the text1
+print(fd['house'])
+# the 50 most frequent words in the text1
+print(fd.most_common(50))
+# generate a cumulative frequency plot for the 50 most frequent words
+fd.plot(50, cumulative=True)
+# **hapaxes** are words that occur once only
+fd.hapaxes()
 
-	fd = FreqDist(text1)
-	print(fd['house']) # how many times does house appear in the text1
-	print(fd.most_common(50)) # the 50 most frequent words of text1
-	fd.plot(50, cumulative=True) # generate a cumulative frequency plot for the 50 most frequent words
-	fd.hapaxes() # hapaxes are words that occur once only
-	
-	fd = FreqDist([len(w) for w in text1]) # distribution of word length
-	print(fd.most_common()) # the most frequent word lengths of text1
-	fd.max() # the most word length
-	fd[5] # the occurences of 5 word-length
-	fd.freq(5) # the 
+# distribution of word length
+fd = FreqDist([len(w) for w in text1])
+# the most frequent word lengths of text1
+print(fd.most_common())
+# the most word length
+fd.max()
+# the occurences of 5 word-length
+fd[5]
+# frequency of a given sample
+fd.freq(5)
+```
 
-How can we automatically identify the words of a text that are most informative about the topic and genre of the text? the 50 most frequent words don't help us, and those words that occur once only, the so-called **hapaxes**, don't help too. Since neither frequent nor infrequent words help, we need to try something else.
+通过上面的实验可以看出不管是高频词、还是低频词都无法为文本提供足够的信息量，没办法反映文本的话题或流派。
 
-文本中的高频词和低频词都不能有效的反应文本的有用信息
+那么较长的单词能否提供有用的信息呢？可惜较长的单词往往是 **hapaxes**，是低频词，看来它们也无法提供有用信息。不过如果同时考虑词长度以及词频率，效果会稍微好一些（不过依然没有实用价值，后面我们会介绍更加复杂的技术来解决此问题）。
 
-How about the long words of the text? Because long words are often hapaxes, so it would be better to consider with the frequently occuring of those long words.(i.e, eliminates frequent short words and infrequent long words)
+Let's look at the *long* words of a text; perhaps these will be more characteristic and informative. Because long words are often hapaxes, so it would be better to consider with the frequently occuring of those long words.(i.e, eliminates frequent short words and infrequent long words)
 
-		fd = FreqDist(text1)
-		sorted(w for w in set(text1) if len(w) > 7 and fd[w] > 10)
+```python
+fd = FreqDist(text1)
+sorted(w for w in set(text1) if len(w) > 7 and fd[w] > 10)
+```
 
-如果同时考虑词长度以及词频率，效果会稍微好一些
+频率分布对象的其它方法有：
 
-
-	fdist = FreqDist(samples) 	create a frequency distribution containing the given samples
-	fdist[sample] += 1 	increment the count for this sample
-	fdist['monstrous'] 	count of the number of times a given sample occurred
-	fdist.freq('monstrous') 	frequency of a given sample
-	fdist.N() 	total number of samples
-	fdist.most_common(n) 	the n most common samples and their frequencies
-	for sample in fdist: 	iterate over the samples
-	fdist.max() 	sample with the greatest count
-	fdist.tabulate() 	tabulate the frequency distribution
-	fdist.plot() 	graphical plot of the frequency distribution
-	fdist.plot(cumulative=True) 	cumulative plot of the frequency distribution
-	fdist1 |= fdist2 	update fdist1 with counts from fdist2
-	fdist1 < fdist2 	test if samples in fdist1 occur less frequently than in fdist2
-
-
-### Collocation 固定搭配
-
-A collocation is a sequence of words that occur together unusually often. A characteristic of collocations is that they are resistant to substitution with words that have similar senses; for example, maroon wine sounds definitely odd.
-
-固定搭配就是经常在一起出现的词。固定搭配的一个特性是，对使用同义词进行替换具有抗性
-
-To get a handle on collocations, we start off by extracting from a text a list of word pairs, also known as **bigrams**. Collocations are essentially just frequent bigrams.
-
-固定搭配必然是高频的bigram，获取文本中所有的bigram以及获取文本中所有固定搭配
-
-	>>> list(bigrams(['more', 'is', 'said', 'than', 'done']))
-	[('more', 'is'), ('is', 'said'), ('said', 'than'), ('than', 'done')]
-	>>> text1.collocations()
-
-You should know that collocations that emerge are very specific to the genre of the texts.
+![](fdist-methods.jpg)
 
 
-## Tokenization
-A token is the technical name for a sequence of characters — such as hairy, his, or :) — that we want to treat as a group.
+### Collocations and Bigrams 固定搭配和二元文法
 
-A word type is the form or spelling of the word (include punctuation symbols)independently of its specific occurrences in a text — that is, the word considered as a unique item of vocabulary.
+固定搭配就是经常在一起出现的词，也即固定搭配是一个短语。固定搭配的一个特性是，对使用同义词进行替换具有抗性，即不支持同义词替换。
 
+A **collocation** is a sequence of words that occur together unusually often. A characteristic of collocations is that they are resistant to substitution with words that have similar senses; for example, maroon wine sounds definitely odd.
 
+直观来看固定搭配就是高频的二元文法以及那些虽然出现次数少但组合在一起概率高的低频二元文法
 
-## Words Model
+To get a handle on collocations, we start off by extracting from a text a list of word pairs, also known as **bigrams**. Collocations are essentially just frequent bigrams, except that we want to pay more attention to the cases that involve rare words. 
 
-## Train a model and predict scores
+ In particular, we want to find bigrams that occur more often than we would expect based on the frequency of the individual words. You should know that collocations that emerge are very specific to the genre of the texts.
 
+提取文本的二元文法：
 
-### Word Sense Disambiguation 词二义性消除
+```python
+list(bigrams(['more', 'is', 'said', 'than', 'done']))
+```
+
+提取文本的固定搭配：
+
+```python
+text1.collocations()
+```
+
+## Language Understanding Technologies
+
+### Word Sense Disambiguation 词义消歧
+
+词在不同上下文中往往具有不同的含义，确定特定上下文环境中某个词的含义就是消除歧义的过程。
+
 In word sense disambiguation we want to work out which sense of a word was intended in a given context.
 
-词在不同上下文中往往具有不同的含义，确定特定上下文环境中某个词的含义就是消除二义性的过程
-
 ### Pronoun Resolution 代词解析
-A deeper kind of language understanding is to work out "who did what to whom" — i.e., to detect the subjects and objects of verbs. Answering this question involves finding the antecedent of pronoun, **anaphora resolution** — identifying what a pronoun or noun phrase refers to — and **semantic role labeling** — identifying how a noun phrase relates to the verb
+自然语言处理中经常需要理解 “谁对谁做了什么”，其中的关键是要理解文本中的主语和宾语。主要涉及到找代词的先行词，利用对照分析识别代词名字的含义，以及利用语义角色标注识别名词短语如何同动词相联系的。
 
-自然语言处理中经常需要理解“谁对谁做了什么”，其中的关键是要理解文本中的主语和宾语。主要涉及到找代词的先行词，利用对照分析识别代词名字的含义，以及利用语义角色标注识别名词短语如何同动词关联
+A deeper kind of language understanding is to work out "who did what to whom" — i.e., to detect the subjects and objects of verbs. Answering this question involves finding the antecedent of pronoun, **anaphora resolution** — identifying what a pronoun or noun phrase refers to — and **semantic role labeling** — identifying how a noun phrase relates to the verb.
 
-### Machine Traslation
-Machine translation is difficult because a given word could have several possible translations (depending on its meaning), and because word order must be changed in keeping with the grammatical structure of the target language. Today these difficulties are being faced by collecting massive quantities of parallel texts from news and government websites that publish documents in two or more languages. Given a document in German and English, and possibly a bilingual dictionary, we can automatically pair up the sentences, a process called **text alignment**. Once we have a million or more sentence pairs, we can detect corresponding words and phrases, and build a model that can be used for translating new text.
+### Generating Language Output 生成语言输出
 
-### Spoken Dialog Systems
+If we can automatically solve such problems of language understanding, we will be able to move on to tasks that involve generating language output, such as **question answering**, a machine should be able to answer a user's questions relating to collection of texts.
+
+### Machine Traslation 机器翻译
+For a long time now, machine translation (MT) has been the holy grail of language understanding, ultimately seeking to provide high-quality, idiomatic translation between any pair of languages.
+
+Machine translation is difficult because a given word could have several possible translations (depending on its meaning), and because word order must be changed in keeping with the grammatical structure of the target language. Today these difficulties are being faced by collecting massive quantities of **parallel corpus** from news and government websites that publish documents in two or more languages. Given a document in German and English, and possibly a bilingual dictionary, we can automatically pair up the sentences, a process called **text alignment**. Once we have a million or more sentence pairs, we can detect corresponding words and phrases, and build a model that can be used for translating new text.
+
+### Spoken Dialog Systems 对话系统
+
+In the history of artificial intelligence, the chief measure of intelligence has been a linguistic one, namely the Turing Test: can a dialogue system, responding to a user's text input, perform so naturally that we cannot distinguish it from a human-generated response? In contrast, today's commercial dialogue systems are very limited, but still perform useful functions in narrowly-defined domains.
+
+![](pipeline-for-dialogue-system.jpg)
+
+NLTK 简单的对话系统原型：
 
 	nltk.chat.chatbots()
 
@@ -204,278 +272,330 @@ Machine translation is difficult because a given word could have several possibl
 
 The challenge of language understanding has been brought into focus in recent years by a public "shared task" called Recognizing Textual Entailment (RTE).
 
-### Limitations of NLP 自然语言处理不能什么
+### Limitations of NLP 自然语言处理不能干什么
+
+自然语言处理不能以鲁棒的方式进行推理或者理解现实世界的知识，这些人工智能的问题需要留待以后解决。对自然语言处理的定位应该在于，利用相关技术来理解自然语言，而不是解决推理或者知识理解方面的问题。
 
 Despite the research-led advances in tasks like RTE, natural language systems that have been deployed for real-world applications still cannot perform common-sense reasoning or draw on world knowledge in a general and robust manner. We can wait for these difficult artificial intelligence problems to be solved, but in the meantime it is necessary to live with some severe limitations on the reasoning and knowledge capabilities of natural language systems. Accordingly, right from the beginning, an important goal of NLP research has been to make progress on the difficult task of building technologies that "understand language," using superficial yet powerful techniques instead of unrestricted knowledge and reasoning capabilities.
 
-自然语言处理不能以鲁棒的方式进行推理或者理解现实世界的知识，这些人工智能的问题需要留待以后解决。对自然语言处理的定位应该在于，利用相关技术来理解自然语言，而不是解决推理或者知识理解方面的问题
+# Chapter 2: Accessing Text Corpora and Lexical Resources
 
-## Text Corpora 语料库
+## Corpus 语料库
+
 Practical work in Natural Language Processing typically uses large bodies of linguistic data, or **corpora**. A text corpus is a large body of text. Many corpora are designed to contain a careful balance of material in one or more genres.
 
-语料库是进行自然语言处理的数据基础，一般来说语料库会包含各种不同类型的大量文本
+语料库（corpus，复数 corpora）是进行自然语言处理的数据基础，一般来说语料库会包含各种不同流派的文本，我们说这样的语料库是均衡的。
 
 ### Gutenberg Corpus 古登堡语料库
 
-NLTK includes a small selection of texts from the Project Gutenberg electronic text archive, which contains some 25,000 free electronic books, hosted at <http://www.gutenberg.org>.
+NLTK含有[古登堡电子书计划](http://www.gutenberg.org)的部分语料数据
 
-NLTK含有古登堡电子书计划的部分语料数据
+```python
+# 语料库按照文件来划分
+# the file identifiers in the Gutenberg corpus
+nltk.corpus.gutenberg.fileids()
+# 每个文件代表一本书
+# get the words in the austen-emma.txt
+# return a list to hold words
+nltk.corpus.gutenberg.words('austen-emma.txt')
+# return as a Text object
+nltk.Text(nltk.corpus.gutenberg.words('austen-emma.txt'))
+```
 
-	nltk.corpus.gutenberg.fileids() # the file identifiers in the Gutenberg corpus
-	nltk.corpus.gutenberg.words('austen-emma.txt') # the words in the austen-emma.txt, return back a list to hold words
-	nltk.Text(nltk.corpus.gutenberg.words('austen-emma.txt')) # return back as Text object
+对 Gutenberg corpus 进行简单的统计:
 
-Do some statistics for Gutenberg corpus:
+```python
+from nltk.corpus import gutenberg
+for fileid in gutenberg.fileids():
+    # The raw() function gives us the contents of the file without any linguistic processing.
+	num_chars = len(gutenberg.raw(fileid))
+	num_words = len(gutenberg.words(fileid))
+	num_sents = len(gutenberg.sents(fileid))
+	num_vocab = len(set(w.lower() for w in gutenberg.words(fileid)))
+    print(fileid, "单词平均长度:{},句子平均长度:{},单词平均出现次数:{}".format(
+    	round(num_chars/num_words), round(num_words/num_sents), round(num_words/num_vocab)))
+```
 
-	for fileid in gutenberg.fileids():
-		num_chars = len(gutenberg.raw(fileid)) [1]
-		num_words = len(gutenberg.words(fileid))
-		num_sents = len(gutenberg.sents(fileid))
-		num_vocab = len(set(w.lower() for w in gutenberg.words(fileid)))
-		print(round(num_chars/num_words), round(num_words/num_sents), round(num_words/num_vocab), fileid)
+由以上分析结果可知，不同书籍的单词的平均长度为固定，但句子长度和词汇多样性则因书籍而异。
 
-1. average word length 单词平均长度
-2. average sentence length 句子平均长度
-3. lexical diversity score(the number of times each vocabulary item appears in the text on average) 词汇平均出现次数 即词汇多样性评分
-
-Observe that average word length appears to be a general property of English, since it has a recurrent value of 4. (In fact, the average word length is really 3 not 4, since the num_chars variable counts space characters.) By contrast average sentence length and lexical diversity appear to be characteristics of particular authors.
-
-由分析可知，英语中单词的平均长度为3，而句子长度和词汇多样性评分则因文章而异
-
-### Web & Chat Corpus 网络和聊天语料库
+### Web and Chat Corpus 网络和聊天语料库
 
 Although Project Gutenberg contains thousands of books, it represents established literature. It is important to consider less formal language as well. NLTK's small collection of web text from some web site. There is also a corpus of instant messaging chat sessions, originally collected by the Naval Postgraduate School for research on automatic detection of Internet predators.
 
-除了上面的古登堡电子书外，NLTK还提供了别的语料库，毕竟古登堡文本太过书面式，webtext和nps chat语料库内容分别采集自网上论坛以及即时通讯工具
+除了上面的古登堡电子书外，NLTK 还提供了别的语料库，毕竟古登堡文本太过书面式，webtext 和 nps chat 语料库内容分别采集自网上论坛以及即时通讯工具：
 
-	nltk.corpus.webtext.fileids()
-	nltk.corpus.webtext.raw('grail.txt')
-	nltk.corpus.nps_chat.fileids()
-	nltk.corpus.nps_chat.posts('10-19-20s_706posts.xml')
+```python
+nltk.corpus.webtext.fileids()
+nltk.corpus.webtext.raw('grail.txt')
+nltk.corpus.nps_chat.fileids()
+nltk.corpus.nps_chat.posts('10-19-20s_706posts.xml')
+```
 
 ### Brown Corpus 布朗语料库
 
 The Brown Corpus was the first million-word electronic corpus of English, created in 1961 at Brown University. This corpus contains text from 500 sources, and the sources have been categorized by genre, such as news, editorial, reviews, hobbies, fiction, and so on.(a complete list of its genre, see <http://icame.uib.no/brown/bcm-los.html>)
 
-布朗语料库十分庞大，收录内容都根据流派进行了分类，因此布朗语料库很适合用于研究不同流派文本的差异
+布朗语料库十分庞大，收录内容都根据流派进行了分类，因此布朗语料库很适合用于研究不同流派文本的差异性：
 
-	from nltk.corpus import brown
-	brown.categories() # text categories of the brown corpus
-	brown.words(categories='news') # words belong to the news category
-	brown.words(categories=['news', 'reviews'])
-	brown.sents(categories='news')
-	brown.fileids()
-	brown.words(fileids=['cg62']) # words belong to the cg62 file
+```python
+from nltk.corpus import brown
+brown.categories() # text categories of the brown corpus
+brown.words(categories='news') # words belong to the news category
+brown.words(categories=['news', 'reviews'])
+brown.sents(categories='news') # sentences belong to the news category
+brown.fileids()  # the file identifiers in brown corpus
+brown.words(fileids=['cg62']) # words belong to the cg62 file
+```
 
+对 Brown 语料库的简单统计：
 
-The usage of modal verbs in the news genre text:
-新闻类别中情态动词的出现次数：
-
-	fd = nltk.FreqDist(w.lower() for w in brown.words(categories='news'))
-	modals = ['can', 'could', 'may', 'might', 'must', 'will']
-	for m in modals:
-		print(m+':', fd[m], end=' ')
-
-The usage of modal verbs in the each genre text:
-情态动词在各类文本中使用次数的对比：
-
-	cfd = nltk.ConditionalFreqDist((genre, word) for genre in brown.categories() for word in brown.words(categories=genre))
-	 genres = ['news', 'religion', 'hobbies', 'science_fiction', 'romance', 'humor']
-	modals = ['can', 'could', 'may', 'might', 'must', 'will']
-	cfd.tabulate(conditions=genres, samples=modals)
+```python
+# 新闻流派的文本中情态动词（modal verbs ）的出现次数
+fd = nltk.FreqDist(w.lower() for w in brown.words(categories='news'))
+modals = ['can', 'could', 'may', 'might', 'must', 'will']
+for m in modals:
+	print(m, ':', fd[m], end=' ')
+# 情态动词在各种流派文本中使用次数的对比
+cfd = nltk.ConditionalFreqDist((genre, word) for genre in brown.categories() for word in brown.words(categories=genre))
+genres = ['news', 'religion', 'hobbies', 'science_fiction', 'romance', 'humor']
+modals = ['can', 'could', 'may', 'might', 'must', 'will']
+cfd.tabulate(conditions=genres, samples=modals)
+```
 
 ### Reuters Corpus 路透语料库
 
 The Reuters Corpus contains 10,788 news documents totaling 1.3 million words. The documents have been classified into 90 topics, and grouped into two sets, called "training" and "test"; thus, the text with fileid 'test/14826' is a document drawn from the test set. This split is for training and testing algorithms that automatically detect the topic of a document. Unlike the Brown Corpus, categories in the Reuters corpus overlap with each other, simply because a news story often covers multiple topics.
 
-路透语料库含有大量的新闻文档，文档被分成90个话题类别，并且被分成了训练组和测试组。一篇新闻往往会涉及到若干个话题，因此不同话题的文档会有重叠。我们可以查看文档包含哪些话题，也可以查看谈及某个话题的有哪些文档
+路透语料库含有大量的新闻文档，文档被分成 90 个话题类别，并且被分成了训练组和测试组。一篇新闻往往会涉及到若干个话题，因此不同话题的文档会有重叠。我们可以查看文档包含哪些话题，也可以查看涉及到某个话题的有哪些文档：
 
-	from nltk.corpus import reuters
-	reuters.fileids()
-	reuters.categories() # all of the avaiable topics
-	reuters.categories('training/9865') # topcis covered by the document training/9865
-	reuters.categories(['training/9865', 'training/9890'])
-	reuters.fileids('barley') # all of files belong to the topic barley
-	reuters.fileids(['barley', 'corn'])
-	reuters.words('training/9865')
-	reuters.words(['training/9865', 'training/9880'])
-	reuters.words(categories='barley')
-	reuters.words(categories=['barley', 'corn'])
+```python
+from nltk.corpus import reuters
+reuters.fileids()
+reuters.categories() # all of the avaiable topics
+reuters.categories('training/9865') # topcis covered by the document training/9865
+reuters.categories(['training/9865', 'training/9890'])
+reuters.fileids('barley') # all of files belong to the topic barley
+reuters.fileids(['barley', 'corn'])
+reuters.words('training/9865')
+reuters.words(['training/9865', 'training/9880'])
+reuters.words(categories='barley')
+reuters.words(categories=['barley', 'corn'])
+```
 
 ### Inaugural Address Corpus 总统就职演说语料库
 
 this corpus is actually a collection of 55 texts, one for each presidential address. An interesting property of this collection is its time dimension, its fileid's first 4 chars is the year of the text
 
-绘制单词america和citizen在语料库文本中的使用次数（注：这里没有对文档长度归一化）
+绘制单词 america 和 citizen 在语料库文本中的使用次数（注：这里没有对文档长度归一化）
 
-	from nltk.corpus import inaugural
-	cfd = nltk.ConditionalFreqDist((target, fileid[:4]) for fileid in inaugural.fileids() for w in inaugural.words(fileid) for target in ['america', 'citizen'] if w.lower().startswith(target))
-	cfd.plot()
+```python
+from nltk.corpus import inaugural
+cfd = nltk.ConditionalFreqDist((target, fileid[:4]) 
+	for fileid in inaugural.fileids()
+    for w in inaugural.words(fileid) 
+    for target in ['america', 'citizen'] if w.lower().startswith(target))
+cfd.plot()
+```
 
-### Annotated Text Corpora 文本注释语料库
+### Annotated Text Corpora 带有标注的语料库
 
 Many text corpora contain linguistic annotations, representing POS tags, named entities, syntactic structures, semantic roles, and so forth. NLTK provides convenient ways to access several of these corpora, and has data packages containing corpora and corpus samples, freely downloadable for use in teaching and research(<http://nltk.org/data>)
 
-A good tool for creating annotated text corpora is called Brat, and available from <http://brat.nlplab.org/>.
+NLTK 提供了很多标注的语料库，可供免费下载使用，这些语料库一般含有词性、句法结构、语义角色等标注。
 
-NLTK 提供了很多注释型语料库，可供免费下载使用，这些语料库一般含有句法结构，语义角色等注释
+你也可以制作自己的标注语料库，A good tool for creating annotated text corpora is called Brat, and available from <http://brat.nlplab.org/>。
 
-### Corpora in Other Languages 非英语语料库
+### Corpora in Other Languages 非英语的语料库
 
 NLTK comes with corpora for many languages. there is a example, the corpora named *udhr*, contains the Universal Declaration of Human Rights in over 300 languages. Let's use a conditional frequency distribution to examine the differences in word lengths for a selection of languages included in the udhr corpus.
 
-NLTK 提供了很多非英语语料库，这里以udhr语料库为例，该语料库包含300多种语言的人权申明文本，我们可以使用条件频率分布来观察，不同语言单词长度的分布情况
+NLTK 提供了很多非英语语料库，这里以 udhr 语料库为例，该语料库包含 300 多种语言的人权申明文本，我们可以使用条件频率分布来观察，不同语言单词长度的分布情况：
 
-	from nltk.corpus import udhr
-	languages = ['Chickasaw', 'English', 'German_Deutsch', 'Greenlandic_Inuktikut', 'Hungarian_Magyar', 'Ibibio_Efik']
-	cfd = nltk.ConditionalFreqDist((lang, len(word)) for lang in languages for word in udhr.words(lang + '-Latin1'))
-	cfd.plot(cumulative=True)
-
-### Basic Corpus Functionality 语料库对象常用方法
-
-	fileids() 	the files of the corpus
-	fileids([categories]) 	the files of the corpus corresponding to these categories
-	categories() 	the categories of the corpus
-	categories([fileids]) 	the categories of the corpus corresponding to these files
-	raw() 	the raw content of the corpus
-	raw(fileids=[f1,f2,f3]) 	the raw content of the specified files
-	raw(categories=[c1,c2]) 	the raw content of the specified categories
-	words() 	the words of the whole corpus
-	words(fileids=[f1,f2,f3]) 	the words of the specified fileids
-	words(categories=[c1,c2]) 	the words of the specified categories
-	sents() 	the sentences of the whole corpus
-	sents(fileids=[f1,f2,f3]) 	the sentences of the specified fileids
-	sents(categories=[c1,c2]) 	the sentences of the specified categories
-	abspath(fileid) 	the location of the given file on disk
-	encoding(fileid) 	the encoding of the file (if known)
-	open(fileid) 	open a stream for reading the given corpus file
-	root 	if the path to the root of locally installed corpus
-	readme()
-	help(nltk.corpus.reader)	more documentation
+```python
+from nltk.corpus import udhr
+languages = ['Chickasaw', 'English', 'German_Deutsch', 'Greenlandic_Inuktikut', 'Hungarian_Magyar', 'Ibibio_Efik']
+cfd = nltk.ConditionalFreqDist((lang, len(word)) for lang in languages for word in udhr.words(lang + '-Latin1'))
+cfd.plot(cumulative=True)
+```
 
 ### Corpus Structure 语料库的结构
+
 Common Structures for Text Corpora: The simplest kind of corpus is a collection of isolated texts with no particular organization; some corpora are structured into categories like genre (Brown Corpus); some categorizations overlap, such as topic categories (Reuters Corpus); other corpora represent language use over time (Inaugural Address Corpus).
 
-语料库的组织结构一般有一下几种：简单的文本聚合；按照genre，source，author，language等分类组织，并且有时这类方式会在不同类别间存在重叠；具有时间结构的特征，比如新闻语料库
+语料库的组织结构一般有一下几种：
 
-### Loading Your Corpus
+* 没有任何结构，仅仅只是文本的集合
+* 按照流派（genre）、作者（author）、话题（topic）等类别，进行分类组织，如：Brown Corpus；并且有的类别之间可能存在重叠，如：Reuters Corpus。
+* 按照时间顺序组织，如：Inaugural Address Corpus
+
+### NLTK Corpus 对象使用方法
+
+NLTK 各个语料库都被封装在一个 Corpus 对象中，它们拥有类似的访问接口：
+
+![](corpus-methods.jpg)
+
+### Loading Your Corpus 加载自定义语料库
 
 If you have your own collection of text files that you would like to access using the above methods, you can easily load them with the help of NLTK's *PlaintextCorpusReader*.
 
-NLTK支持加载用户自定义语料库：
+NLTK 支持加载自定义语料库：
 
-	from nltk.corpus import PlaintextCorpusReader
-	corpus_root = '/usr/share/dict'
-	fileids_regx = '*.txt' # a regular expression
-	c = PlaintextCorpusReader(corpus_root, fileids_regx)
-	c.fileids()
-	
-	# load your local copy of PennTreeBank
-	from nltk.corpus import BracketParseCorpusReader
-	corpus_root = r"C:\corpora\penntreebank\parsed\mrg\wsj"
-	file_pattern = r".*/wsj_.*\.mrg"
-	ptb = BracketParseCorpusReader(corpus_root, file_pattern)
-	ptb.fileids()
+```python
+from nltk.corpus import PlaintextCorpusReader
+# 语料文件所在目录
+corpus_root = '/usr/share/dict'
+# 语料文件名的匹配模式
+fileids_regx = '*.txt' # a regular expression
+# 加载并返回语料对象
+c = PlaintextCorpusReader(corpus_root, fileids_regx)
+c.fileids()
+```
+
+加载本地的 Penn Treebank 语料库：
+
+```python
+# load your local copy of PennTreeBank
+from nltk.corpus import BracketParseCorpusReader
+corpus_root = r"C:\corpora\penntreebank\parsed\mrg\wsj"
+file_pattern = r".*/wsj_.*\.mrg"
+ptb = BracketParseCorpusReader(corpus_root, file_pattern)
+ptb.fileids()
+```
 
 ## Conditional Frequency Distribution 条件频率分布
 
+Frequency Distribution would compute the number of occurrences of each item in the collection.
+
+频率分布将会计算每个项的出现次数，而条件频率分布可以看成是频率分布的一般化形式。
+
 When the texts of a corpus are divided into several categories, by genre, topic, author, etc, we can maintain separate frequency distributions for each category. This will allow us to study systematic differences between the categories.  A conditional frequency distribution is a collection of frequency distributions, each one for a different "condition". The condition will often be the category of the text.
 
-所谓条件频率分布，就是每个项都有一个“条件”，一般来说“条件”是类别信息，在统计频率时，会依照不同条件分别计算对应条件下的频率分布。语料库往往会被组织成若干分类，如果可以对照不同分类下的分布情况，对研究分类间的差异很有意思。
+所谓条件频率分布，就是每个项都有一个“条件”，一般来说“条件”是类别信息，在统计频率时，会依照不同条件分别计算对应条件下的频率分布。语料库往往会被组织成若干分类，如果可以对照不同分类下的分布情况，对研究分类间的差异很有意义。也即当文本按照流派、话题、作者等类别组织时，我们可以利用 CFD 来分别统计各个类别下的频率分布，这就是条件频率分布。或者我们也可以将 CFD 看成是一系列频率分布的集合。
 
-In the plot() and tabulate() methods, we can optionally specify which conditions to display with a conditions= parameter. When we omit it, we get all the conditions. Similarly, we can limit the samples to display with a samples= parameter. This makes it possible to load a large quantity of data into a conditional frequency distribution, and then to explore it by plotting or tabulating selected conditions and samples.
+![](fd-and-cfd.png)
 
-NLTK 支持对条件频率分布以图表形式展示，分别对应方法`plot`，`tabulate`，这两个方法默认会展示所有类别中的所有项的频率分布，此外可以提供参数`conditions`，`samples`来限制展示的类别以及项
+### CFD 创建
 
-	cfd = nltk.ConditionalFreqDist((genre, word) for genre in brown.categories() for word in brown.words(categories=genre)) # (condition, event) as basic input item
+NLTK 中 FD 和 CFD 的使用：
 
-	cfd.conditions() # input conditions
-	cfd['news'] # the news condition is just a frequency distribution
-	cfd['romance'].most_common(50)
-	cfd['romance']['could'] 
-	 
-	genres = ['news', 'religion', 'hobbies', 'science_fiction', 'romance', 'humor'] # conditions to be display
-	
-	modals = ['can', 'could', 'may', 'might', 'must', 'will'] # events to be display
-	
-	cfd.tabulate(conditions=genres, samples=modals) # display a table consist of the above conditions&events
+```python
+import nltk
+fd = nltk.FreqDist(['event1', 'event2', 'event1'])
+cfd = nltk.ConditionalFreqDist([('condition1', 'event1'), ('condition2', 'event2')])
+```
 
-## Generating Random Text with Bigrams 利用词对生成随机文本
+比如统计 Brown 语料库中每个流派中的词频：
 
-### Bigrams & Conditional Distribution
-
-The bigrams() function takes a list of words and builds a list of consecutive word pairs.
-
-函数`bigrams`利用语句生成连续的词对序列
-
-Use a conditional frequency distribution to create a table of bigrams, the first item of bigram as condition, the second item of bigram as event
-
-将bigram的第一项当成condition，第二项当成event，对上面生成的词对序列进行条件频率建模。假设当前输出的单词（既是当前条件，又是当前上下文环境）是home，直观上来看CFD建模后，下一个输出的单词应该是在条件home下，频率最高的那个单词，以此类推直到生成了预定数目的单词
+```python
+import nltk
+from nltk.corpus import brown
 
 
-### Example
+# (condition, event) pair as parameter for CFD
+cfd = nltk.ConditionalFreqDist((genre, word) 
+                               for genre in brown.categories() 
+                               for word in brown.words(categories=genre))
 
-	import random
+print(cfd.conditions())
+print(cfd['reviews'].most_common(5))
+print(cfd['reviews']['the'])
+```
 
-	def generate_model(cfd, word, num=20, k=5):
-		for i in range(num):
-			print(word, end=' ')
-			# word = cfd[word].max()
-			word = random.choice(cfd[word].most_common(k))[0]
-	
-	words = nltk.corpus.genesis.words('english-kjv.txt')
-	bigrams = nltk.bigrams(words)
-	cfd = nltk.ConditionalFreqDist(bigrams)
-	
-	generate_model(cfd, 'home')
+### CFD plot and tabulate
+
+CFD 对象支持对条件频率分布以图表形式展示，分别对应方法 `plot` 和 `tabulate`，这两个方法默认会展示所有类别中的所有项的频率分布，此外可以提供参数 `conditions`，`samples` 来限制展示的类别以及项目。This makes it possible to load a large quantity of data into a conditional frequency distribution, and then to explore it by plotting or tabulating selected conditions and samples：
+
+```python
+# conditions to be display
+genres = ['news', 'religion', 'hobbies', 'science_fiction', 'romance', 'humor']
+# events to be display
+modals = ['can', 'could', 'may', 'might', 'must', 'will']
+# display a table consist of the above conditions&events
+cfd.tabulate(conditions=genres, samples=modals)
+```
+
+### CFD and Bigrams 生成随机文本
+
+我们可以利用 Bigrams 和 CFD 来实现一个 2-gram 语言模型，并用该语言模型来生成随机文本。
+
+```python
+import random
+
+def get_language_model():
+    words = nltk.corpus.genesis.words('english-kjv.txt')
+    # bigrams() takes a list of words and builds a list of consecutive word pairs.
+    bigrams = nltk.bigrams(words)
+    # the first item of bigram as condition, the second item of bigram as event
+    cfd = nltk.ConditionalFreqDist(bigrams)
+    return cfd
+
+def generate_language(cfd, word, num=20, top_k=5):
+    words = [word]
+    for i in range(num):
+        if top_k > 0:
+            word = random.choice(cfd[word].most_common(top_k))[0]
+        else:
+            word = cfd[word].max()
+        words.append(word)
+    return words
+
+words = generate_language(get_language_model(), 'There')
+print(' '.join(words))
+```
+
+将 bigram 的第一项当成 condition，第二项当成 event，对上面生成的 bigrams 序列进行条件频率建模。假设当前输出的单词（既是当前条件，又是当前上下文环境）是 home，直观上来看 CFD 建模后，下一个输出的单词应该是在条件 home 下，频率最高的那个单词，以此类推直到生成了预定数目的单词
 
 
-## Lexical Resources
-A lexicon, or lexical resource, is a collection of words and/or phrases along with associated information such as part of speech and sense definitions. Lexical resources are secondary to texts, and are usually created and enriched with the help of texts. A lexical entry consists of a headword (also known as a lemma) along with additional information such as the part of speech and the sense definition. Two distinct words having the same spelling are called homonyms.
+## Lexicon 词库
+A lexicon, or lexical resource, is a collection of words and/or phrases along with associated information. Lexical resources are secondary to texts, and are usually created and enriched with the help of texts. 
 
-词典就是一系列单词和短语的集合。一般来说一条词汇项由：词条，读法，词性，含义组成。拼写一致的不同单词被叫做homonyms
+词库就是一系列单词（word）或短语（pharse）及其关联信息的集合。
 
-### Wordlist Corpora 单词表语料库
+A **lexical entry** consists of a **headword** (also known as a **lemma**) along with additional information such as the part of speech and the sense definition. Two distinct words having the same spelling are called **homonyms**.
 
-#### Wordlist ship with Unix
+一般来说一条词汇项由：词条，读法，词性，含义组成。拼写一致的不同单词被叫做 homonyms。
 
-The Words Corpus is the /usr/share/dict/words file from Unix, used by some spell checkers. We can access the wordlist by NLTK `nltk.corpus.words.words()`
+![](lexicon.png)
 
-Unix自带的单词表可以通过NLTK直接访问，下面是利用该单词表实现不常见单词过滤：
+### Wordlist Corpora 单词表词库
 
-  	
+The simplest kind of lexicon is nothing more than a sorted list of words. Sophisticated lexicons include complex structure within and across the individual entries.
 
-	def unusual_words(text):
-		text_vocab = set(w.lower() for w in text if w.isalpha())
-		english_vocab = set(w.lower() for w in nltk.corpus.words.words())
-		unusual = text_vocab - english_vocab
-		return sorted(unusual)
-	
-	unusual_words(nltk.corpus.gutenberg.words('austen-sense.txt'))
+#### 系统单词表
 
-### Stopwords
+Unix 系统自带的英语单词表可以通过 NLTK 直接访问，下面是利用该单词表实现不常见单词过滤：
 
-There is also a corpus of stopwords, that is, high-frequency words like the, to and also that we sometimes want to filter out of a document before further processing. 
+```python
+def unusual_words(text):
+	text_vocab = set(w.lower() for w in text if w.isalpha())
+	english_vocab = set(w.lower() for w in nltk.corpus.words.words())
+	unusual = text_vocab - english_vocab
+	return sorted(unusual)
 
-通常对文本进行进一步处理前，我们都要过滤掉文本中的停止词，因此停止词数量少且出现频率高
+unusual_words(nltk.corpus.gutenberg.words('austen-sense.txt'))
+```
+
+#### 停止词表
+
+There is also a corpus of **stopwords**, that is, high-frequency words like 'the', 'to' and 'also' that we sometimes want to filter out of a document before further processing. 
+
+因为停止词数量少且出现频率高，且跟文本主题信息关系较小。通常对文本进行进一步处理前，我们都要过滤掉文本中的停止词：
 
 	nltk.corpus.stopwords.words('english')
 
-### FirstNames
+#### 姓氏词表
 
-The names corpus contains 8,000 first names categorized by gender. 
-
-NLTK 含有第一名字的词典，该词典根据性别分类，下面我们要找出具有性别二义性的第一名字（即男女都有使用的名字）：
+NLTK 含有姓氏的词典，该词典根据性别分类，下面我们要找出具有性别二义性的姓氏（即男女都有使用的姓氏）：
 
 	names = nltk.corpus.names
 	[w for w in names.words('male.txt') if w in names.words('female.txt')]
 
-名字中最后字母在男女名字中使用情况的分布：
+姓氏中最后字母在男女名字中使用情况的分布：
 
 	cfd = nltk.ConditionalFreqDist((fileid, name[-1]) for fileid in nltk.corpus.names.fileids() for name in nltk.corpus.names.words(fileid))
 	cfd.plot()
 
-## Pronouncing Dictionary
+### Pronouncing Dictionary 语音词库
 
 A slightly richer kind of lexical resource is a table (or spreadsheet), containing a word plus some properties in each row. NLTK includes the CMU Pronouncing Dictionary for US English, which was designed for use by speech synthesizers.
 
@@ -484,9 +604,7 @@ NLTK 含有针对美式英语的带有读音的词典
 	entries = nltk.corpus.cmudict.entries()
 	entries[42379] # ('fireball', ['F', 'AY1', 'ER0', 'B', 'AO2', 'L'])
 
-For each word, this lexicon provides a list of phonetic codes — distinct labels for each contrastive sound — known as phones. The symbols in the CMU Pronouncing Dictionary are from the Arpabet, described in more detail at <http://en.wikipedia.org/wiki/Arpabet>
-
-每个词汇项含有单词以及读音代码表，读音代码表采用Arpabet
+每个词汇项含有单词以及读音代码表，读音代码表采用 [Arpabet](http://en.wikipedia.org/wiki/Arpabet)。
 
 The following program finds all words whose pronunciation ends with a syllable sounding like nicks. You could use this method to find rhyming words.
 
@@ -505,55 +623,64 @@ we define a function to extract the stress digits and then scan our lexicon to f
 	
 	[w for w, pron in entries if stress(pron) == ['0', '1', '0', '2', '0']]
 
-## Comparative wordlist 多语言对照词典
+### Comparative wordlist 多语言对照词库
 
 Another example of a tabular lexicon is the comparative wordlist. NLTK includes so-called Swadesh wordlists, lists of about 200 common words in several languages. The languages are identified using an ISO 639 two-letter code.
 
-NLTK 含有多语言对照词典，语言使用ISO-639两字符标识
+NLTK 含有多语言对照词典，语言使用 ISO-639 两字符标识
 
 	from nltk.corpus import swadesh
 	swadesh.fileids()
 	swadesh.words('en') # english wordlist
 	swadesh.entries(['fr', 'en']) # comparative wordlist
 
-## Toolbox
+### Shoebox and Toolbox 词库
 
 Perhaps the single most popular tool used by linguists for managing data is Toolbox, previously known as Shoebox since it replaces the field linguist's traditional shoebox full of file cards. Toolbox is freely downloadable from <http://www.sil.org/computing/toolbox/>.
 
 A Toolbox file consists of a collection of entries, where each entry is made up of one or more fields. Most fields are optional or repeatable, which means that this kind of lexical resource cannot be treated as a table or spreadsheet.
 
-Toolbox是一个有力的语言数据工具，每个toolbox文件含有很多entries，且每个entry含有不定数目的fields，因此不能将其当成表结构来处理，更适合用XML进行处理
+Toolbox 是一个有力的语言数据工具，每个 toolbox 文件含有很多 entries，且每个 entry 含有不定数目的 fields，因此不能将其当成表结构来处理，更适合用 XML 进行处理
 
-		nltk.corpus.toolbox.entries('rotokas.dic')
+```
+nltk.corpus.toolbox.entries('rotokas.dic')
+```
 
 ## WordNet
 
 WordNet is a semantically-oriented dictionary of English, similar to a traditional thesaurus but with a richer structure. NLTK includes the English WordNet, with 155,287 words and 117,659 synonym sets. We'll begin by looking at synonyms and how they are accessed in WordNet.
 
-WordNet 是一个基于语义的英语词典，不同于传统词典的是它含有更加丰富的结构，NLTK 包含了WordNet的155,287个单词以及117,659个同义词集
+WordNet 是一个基于语义的词典，不同于传统词典的是它含有更加丰富的结构，NLTK 包含了 WordNet 的 155,287 个单词以及 117,659 个同义词集
 
-### Synonyms
+### Synonyms 同义词
 
 Explore synonyms with the help of WordNet:
 
 1. 查找单词对应的所有同义词集合
+
 2. 查看同义词集合中的单词
+
 3. 查看同义词集的定义
+
 4. 查看同义词集的例句
-5. 查看同义词集中的所有lemmas（lemma同义词集中唯一标识一个词）
 
-   from nltk.corpus import wordnet as wn
-   wn.synsets('motorcar') # synonyms sets, output [Synset('car.n.01')]
-   wn.synset('car.n.01').lemma_names() # synonymous words or lemmas
-   wn.synset('car.n.01').definition() # definition
-   wn.synset('car.n.01').examples() # example sentences
-   wn.synset('car.n.01').lemmas()
-   wn.lemma('car.n.01.automobile')
-   wn.lemma('car.n.01.automobile').synset()
-   wn.lemma('car.n.01.automobile').name()
+5. 查看同义词集中的所有 lemmas（lemma 同义词集中唯一标识一个词）
 
-   wn.synsets('car') # car has several synonyms sets
-   wn.lemmas('car') #  all the lemmas involving the word car
+
+```
+from nltk.corpus import wordnet as wn
+wn.synsets('motorcar') # synonyms sets, output [Synset('car.n.01')]
+wn.synset('car.n.01').lemma_names() # synonymous words or lemmas
+wn.synset('car.n.01').definition() # definition
+wn.synset('car.n.01').examples() # example sentences
+wn.synset('car.n.01').lemmas()
+wn.lemma('car.n.01.automobile')
+wn.lemma('car.n.01.automobile').synset()
+wn.lemma('car.n.01.automobile').name()
+
+wn.synsets('car') # car has several synonyms sets
+wn.lemmas('car') #  all the lemmas involving the word car
+```
 
 ### WordNet Hierarchy
 
@@ -561,14 +688,14 @@ First you should to know that synsets in WordNet are linked by a complex network
 
 WordNet synsets correspond to abstract concepts, and they don't always have corresponding words in English. These concepts are linked together in a hierarchy. Some concepts are very general, such as Entity, State, Event — these are called unique beginners or root synsets. Others, such as gas guzzler and hatchback, are much more specific. 
 
-WordNet 的同义词集以层级树状结构进行组织，节点是同义词集，边表示同义词集从抽象到具体的关联，越位于上层的集概念越抽象，位于下层的是概念越具体
+WordNet 的同义词集以层级树状结构进行组织，节点是同义词集，边表示同义词集从抽象到具体的关联，越位于上层的集概念越抽象，位于下层的是概念越具体。
 
-访问同义词集的子集
+访问同义词集的子集：
 
 	wn.synset('car.n.01').hyponyms()
 	[lemma.name() for s in wn.synset('car.n.01').hyponyms() for lemma in s.lemmas()]
 
-访问同义词集的父集，也许含有多个父集
+访问同义词集的父集，也许含有多个父集：
 
 	wn.synset('car.n.01').hypernyms()
 	wn.synset('car.n.01').hypernym_paths() # synset paths to root
@@ -576,7 +703,7 @@ WordNet 的同义词集以层级树状结构进行组织，节点是同义词集
 
 Hypernyms and hyponyms are called lexical relations because they relate one synset to another. These two relations navigate up and down the "is-a" hierarchy. Another important way to navigate the WordNet network is from items to their components (meronyms) or to the things they are contained in (holonyms)
 
-除了上面提到的从抽象概念到具体概念，以及从具体概念到抽象概念的同义词集访问方法外，还有从部分到整体以及从整体到部分的方法，比如树含有树干，树枝等部分`part_meronyms()`；树由心材和边材构成`substance_meronyms()`；一些树构成了森林`member_holonyms()`
+除了上面提到的从抽象概念到具体概念，以及从具体概念到抽象概念的同义词集访问方法外，还有从部分到整体以及从整体到部分的方法，比如树含有树干，树枝等部分 `part_meronyms()`；树由心材和边材构成 `substance_meronyms()`；一些树构成了森林 `member_holonyms()`：
 
 	wn.synset('tree.n.01').part_meronyms()
 	wn.synset('tree.n.01').substance_meronyms()
@@ -585,22 +712,22 @@ Hypernyms and hyponyms are called lexical relations because they relate one syns
 
 There are also relationships between verbs. For example, the act of walking involves the act of stepping, so walking entails stepping. Some verbs have multiple entailments
 
-此外动词之间还有构成关系，比如走路由迈步构成;吃有咀嚼和吞咽构成；挑逗有高兴和失望构成
+此外动词之间还有构成关系，比如走路由迈步构成;吃有咀嚼和吞咽构成；挑逗有高兴和失望构成：
 
 	wn.synset('walk.v.01').entailments()
 	wn.synset('eat.v.01').entailments()
 	wn.synset('tease.v.03').entailments()
 
-由lemmas构成的词汇关系
+由 lemmas 构成的词汇关系：
 
 	wn.lemma('horizontal.a.01.horizontal').antonyms()
 
 
 We have seen that synsets are linked by a complex network of lexical relations. Given a particular synset, we can traverse the WordNet network to find synsets with related meanings. Knowing which words are semantically related is useful for indexing a collection of texts, so that a search for a general term like *vehicle* will match documents containing specific terms like *limousine*.
 
-WordNet通过同义词集间的词汇关系构成了复杂的网络关系，知道同义词集语义上的关联性对检索一段文本很有用处，比如检索vehicle时，会返回包含limousine的文档（因为limousine是一种vehicle）
+WordNet 通过同义词集间的词汇关系构成了复杂的网络关系，知道同义词集语义上的关联性对检索一段文本很有用处，比如检索 vehicle 时，会返回包含 limousine 的文档（因为 limousine 是一种 vehicle）
 
-查看两个同义词集最近公共父同义词集：
+查看两个同义词集最近公共父同义词集，即最近的公共抽象概念：
 
 	one_synset.lowest_common_hypernyms(another_synset)
 
@@ -617,36 +744,24 @@ WordNet通过同义词集间的词汇关系构成了复杂的网络关系，知�
 
  NLTK also includes VerbNet, a hierarhical verb lexicon linked to WordNet. It can be accessed with `nltk.corpus.verbnet`.
 
-
-
 ## Zipf's Law
 
 Let f(w) be the frequency of a word w in free text. Suppose that all the words of a text are ranked according to their frequency, with the most frequent word first. Zipf's law states that the frequency of a word type is inversely proportional to its rank (i.e. f × r = k, for some constant k). For example, the 50th most common word type should occur three times as frequently as the 150th most common word type.
 
-将一段文本中的单词按照其在该文本中的出现次数进行排序，根据Zipf's Law 单词出现次数和单词排名是成反比的，也就是说对于任意单词，该单词排名*该单词出现次数应该是一个常量
+将一段文本中的单词按照其在该文本中的出现次数进行排序，根据 Zipf's Law 单词出现次数和单词排名是成反比的，也就是说对于任意单词，该单词排名乘以该单词出现次数应该是一个常量
 
 1. Write a function to process a large text and plot word frequency against word rank using `pylab.plot`. Do you confirm Zipf's law? (Hint: it helps to use a logarithmic scale). What is going on at the extreme ends of the plotted line? 绘制大段文本的单词出现次数以及单词排名，看是否符合Zipf's Law
-
 2. Generate random text, e.g., using `random.choice("abcdefg ")`, taking care to include the space character. You will need to import random first. Use the string concatenation operator to accumulate characters into a (very) long string. Then tokenize this string, and generate the Zipf plot as before, and compare the two plots. What do you make of Zipf's Law in the light of this? 随机生成大量的文本并切分为单词，对其进行分析，看是否符合Zipf's Law
+
+# Chapter 3: Processing Raw Text
 
 ## Text Sources 文本数据来源
 
-The processing pipeline of source text to the available corpus material
-
-从文本数据来源到生成语料数据的过程：
-
-1. 从网络下载或从本地加载特定格式的数据，这里要注意编码问题
-2. 根据数据格式提取其中的文本内容，并对数据一般化并进行清理
-3. 对文本内容tokenization，生成token list
-4. 将token list装换为Text对象，该对象支持各种分析文本的方法
-
 ### Electronic Books
 
-A small sample of texts from Project Gutenberg appears in the NLTK corpus collection. However, you may be interested in analyzing other texts from [Project Gutenberg](http://www.gutenberg.org/). Although 90% of the texts in Project Gutenberg are in English, it includes material in over 50 other languages.
+A small sample of texts from Project Gutenberg appears in the NLTK corpus collection. However, you may be interested in analyzing other texts from [Project Gutenberg](). Although 90% of the texts in Project Gutenberg are in English, it includes material in over 50 other languages.
 
-NLTK 语料库中只含有古登堡项目的一小部分文本，我们可以从利用古登堡项目的其他电子书数据来作为我们文本的数据来源
-
-
+NLTK 语料库中只含有古登堡项目（Project Gutenberg）的一小部分文本，我们可以从利用[古登堡项目](http://www.gutenberg.org/)的其他电子书数据来作为我们文本的数据来源：
 
 	from urllib import request
 	import nltk
@@ -661,7 +776,7 @@ NLTK 语料库中只含有古登堡项目的一小部分文本，我们可以从
 
 Much of the text on the web is in the form of HTML documents. You can use a web browser to save a page as text to a local file, then access this as described in the section on files below. However, if you're going to do this often, it's easiest to get Python to do the work directly. To get text out of HTML we will use a Python library called *BeautifulSoup*.
 
-使用BeautifulSoup库来解析HTML文档中的文本数据
+使用 BeautifulSoup 库来解析 HTML 文档中的文本数据
 
 	from bs4 import BeautifulSoup
 	url = "http://news.bbc.co.uk/2/hi/health/2284783.stm"
@@ -671,17 +786,17 @@ Much of the text on the web is in the form of HTML documents. You can use a web 
 	text = nltk.Text(tokens)
 	text.concordance('gene')
 
-### Search Engine Results
+### Web Documents and Search Engine Results
 
 The web can be thought of as a huge corpus of unannotated text. Web search engines provide an efficient means of searching this large quantity of text for relevant linguistic examples. The main advantage of search engines is size: since you are searching such a large set of documents, you are more likely to find any linguistic pattern you are interested in.  A second advantage of web search engines is that they are very easy to use. Thus, they provide a very convenient tool for quickly checking a theory, to see if it is reasonable.
 
-搜索引擎可以用来查询语义相关的词汇，因为文本基数大，搜索引擎返回的结果是十分丰富的，即词汇多样性足够强。
+Web 页面可以看成是海量的未标注语料库。而利用搜索引擎可以查询语义相关的词汇，因为文本基数大，搜索引擎返回的结果是十分丰富的，即词汇多样性足够强。
 
 ### RSS Feeds
 
 The blogosphere is an important source of text, in both formal and informal registers. With the help of a Python library called the *Universal Feed Parser*, we can access the content of a blog
 
-博客是因为同时含有正式以及非正式文本，所以博客是很好的文本来源，借助于feedparser库，可以很方便的从博客的RSS中提取文本数据
+博客是因为同时含有正式以及非正式文本，所以博客是很好的文本来源，借助于 feedparser 库，可以很方便的从博客的 RSS 中提取文本数据
 
 	import feedparser
 	llog = feedparser.parse("http://languagelog.ldc.upenn.edu/nll/?feed=atom")
@@ -701,57 +816,71 @@ The blogosphere is an important source of text, in both formal and informal regi
 
 Text often comes in binary formats — like PDF and MSWord — that can only be opened using specialized software. Third-party libraries such as *pypdf* and *pywin32* provide access to these formats. Extracting text from multi-column documents is particularly challenging.
 
-从二进制文件中解析文本数据可以借助pypdf，pywin32，即使这样，从二进制中解析文本数据也是充满挑战的，也许更好的办法是自己手动用应用程序打开文件后导出文本数据
+从二进制文件中解析文本数据可以借助 pypdf，pywin32，即使这样，从二进制中解析文本数据也是充满挑战的，也许更好的办法是自己手动用应用程序打开文件后导出文本数据。
 
-### Char Encoding/Decoding
+## The Processing Pipeline for Raw text
 
-文本数据的处理往往涉及到编码解码的问题,python支持unicode字符集,可以使用`\uxxxx`来表示任何unicode字符，在内部python将字符当成unicode字符进行处理，但是当涉及到跟外部数据交互时，我们需要考虑文件、网页数据或者命令行终端的编码是怎样的，当从外部读取时需要解码为unicode，当写入外部时需要将数据编码成外部适应的格式。
+用 NLTK 从文本数据来源（raw text）到生成语料数据（corpus）的过程：
 
-一个常见的问题是，从特定编码的文件中读出数据无法在命令行终端显示，这一般是由于命令行的编码格式无法解读文件中的字符数据，此时可以将不可编码字符以unicode代码格式输出`line.encode('unicode_escape')`
+1. 从网络下载或从本地加载特定格式的数据，这里要注意编码问题
+2. 根据数据格式提取其中的文本内容
+3. 对文本内容 tokenization 处理
+4. 对 token 进行 normalization 处理
+5. 将 tokens 转换为 Text 对象，该对象支持各种分析文本的方法
 
-### Normalizing Text 文本一般化
+![](process-raw-text-pipeline.png)
 
-we want to convert uppercase into lowercase char, and strip off any affixes, a task known as stemming. A further step is to make sure that the resulting form is a known word in a dictionary, a task known as lemmatization.
+### Text Processing with Unicode
 
-通常我们要对文本进行某些预处理，比如转换大小写以及移除后缀，这个任务被叫做提取词根，更进一步的，我们希望提取的词是字典中的合法单词，该任务叫做lemmatization
+Our programs will often need to deal with different languages, and different character sets. The concept of "plain text" is a fiction. If you live in the English-speaking world you probably use ASCII, possibly without realizing it. If you live in Europe you might use one of the extended Latin character sets. How about the non-ascii charsets? We can use unicode to encode non-ascii charsets. 
 
-NLTK includes several off-the-shelf stemmers, and if you ever need a stemmer you should use one of these in preference to crafting your own using regular expressions, since these handle a wide range of irregular cases.
+详解 Unicode 相关概念：
 
-NLTK 自带了很多用于提取词根的工具，不同提取词根工具使用的规则不同，所以产生的结果也不同，在提取词根时工具无所谓好坏，只是不同的工具有不同的适应情形
+Unicode supports over a million characters. Each character is assigned a number, called a **code point**. In Python, code points are written in the form `\uxxxx`. 
 
-	raw = 'a mandate from the masses, not from some farcical aquatic ceremony'
-	tokens = nltk.word_tokenize(raw)	
-	porter = nltk.PorterStemmer()
-	lancaster = nltk.LancasterStemmer()
-	[porter.stem(t) for t in tokens]
-	[lancaster.stem(t) for t in tokens]	
+Within a program, we can manipulate Unicode strings just like normal strings. However, when Unicode characters are stored in files or displayed on a terminal, they must be **encoded as a stream of bytes**. Some encodings (such as ASCII and Latin-2) use **a single byte** per code point, so they can only support a small subset of Unicode, enough for a single language. Other encodings (such as UTF-8) use **multiple bytes** and can represent the full range of Unicode characters.
 
-lemmatization只有在移除词缀后单词合法，才会移除词缀
+Text in files will be in a particular encoding, so we need some mechanism for translating it into Unicode — translation into Unicode is called **decoding**. Conversely, to write out Unicode to a file or a terminal, we first need to translate it into a suitable encoding — this translation out of Unicode is called **encoding**.
 
-	wnl = nltk.WordNetLemmatizer()
-	[wnl.lemmatize(t) for t in tokens]
+![](unicode.png)
 
-Another normalization task involves identifying non-standard words including numbers, abbreviations, and dates, and mapping any such tokens to a special vocabulary.
+From a Unicode perspective, characters are abstract entities which can be realized as one or more **glyphs**. Only glyphs can appear on a screen or be printed on paper. A **font** is a mapping from characters to glyphs.
 
-此外文本的一般化处理还包括对数字，缩写，日期等非标准token的处理
+![](font-glyph.png)
 
-### Tokenization
+文本数据的处理往往涉及到编码解码的问题, Python 支持 unicode 字符集,可以使用 `\uxxxx` 来表示任何 unicode 字符，在内部 Python 将字符当成 unicode 字符进行处理，但是当涉及到跟外部数据交互时，我们需要考虑文件、网页数据或者命令行终端的编码是怎样的，当从外部读取时需要解码为 unicode，当写入外部时需要将数据编码成外部适应的格式。
 
-The very simplest method for tokenizing text is to split on whitespace.
+一个常见的问题是，从特定编码的文件中读出数据无法在命令行终端显示，这一般是由于命令行的编码格式无法解读文件中的字符数据，此时可以将不可编码字符以 unicode 代码格式输出 `line.encode('unicode_escape')`。
 
-最简单tokenization的方法，文本根据空白分割
-​	
-	re.split(r'\s+', raw) # 没有考虑标点符号
+### Tokenization 分词
 
-根据单词边界分割
+Tokenization is the task of cutting a string into identifiable linguistic units that constitute a piece of language data. Although it is a fundamental task, we have been able to delay it until now because many corpora are already tokenized, and because NLTK includes some tokenizers.
+
+许多语料库文本已经经过了 tokenization 处理，并且 NLTK 也提供了 tokenizer 工具对文本处理。不过我们也可以尝试用正则表达式开发自己的玩具 tokenizer。
+
+#### 根据空白分割
+
+最简单 tokenization 的方法，根据文本中的空白进行分割：
+
+```python
+import re
+
+re.split(r'\s+', raw) # 缺点：没有考虑标点符号
+```
+
+#### 根据单词边界分割
 
 	re.split(r'\W+', raw)
 
-考虑了连字符以及标点符号
-​	
-	re.findall(r"\w+(?:[-']\w+)*|'|[-.(]+|\S\w*", raw)
+#### 根据标点符号分割
 
-NLTK 自带支持使用正则表达式tokenization的工具
+```
+re.findall(r"\w+(?:[-']\w+)*|'|[-.(]+|\S\w*", raw)
+```
+
+#### 更加复杂的正则表达式
+
+NLTK 支持使用正则表达式 tokenization 的工具
 
 	text = 'That U.S.A. poster-print costs $12.40...'
 	pattern = r'''(?x)    # set flag to allow verbose regexps
@@ -765,137 +894,229 @@ NLTK 自带支持使用正则表达式tokenization的工具
 	tokens = nltk.regexp_tokenize(text, pattern)
 	#set(tokens).difference(nltk.corpus.words.words('en'))
 
+
+
 Tokenization turns out to be a far more difficult task than you might have expected. No single solution works well across-the-board, and we must decide what counts as a token depending on the application domain.
 
 When developing a tokenizer it helps to have access to raw text which has been manually tokenized, in order to compare the output of your tokenizer with high-quality (or "gold-standard") tokens. The NLTK corpus collection includes a sample of Penn Treebank data, including the raw Wall Street Journal text (nltk.corpus.treebank_raw.raw()) and the tokenized version (nltk.corpus.treebank.words()).
 
-tokenization并没有针对所有情形下一致的解决方案，我们通常需要根据不同应用场景来设计不同的tokenization策略，NLTK 语料库提供了人工tokenization后的数据和原始的文本数据，这样有利于程序员比对自己的tokenizatin是否精准
+正则表达式并不能解决 tokenization 问题，该问题比我们想象的更加复杂。tokenization 并没有针对所有情形下一致的解决方案，我们通常需要根据不同应用场景来设计不同的 tokenization策略，NLTK 语料库提供了人工 tokenization 后的数据和原始的文本数据，这样有利于程序员比对自己的tokenizatin 是否精准。
+
+### Text Normalization 文本规范化
+
+We want to convert uppercase into lowercase char, and strip off any affixes, a task known as **stemming**. 
+
+A further step is to make sure that the resulting form is a known word in a dictionary, a task known as **lemmatization**.
+
+通常我们要对文本进行某些预处理，比如转换大小写以及移除后缀，这个任务被叫做 stemming，更进一步的，我们希望将提取的词转换为字典中的合法单词，该任务叫做 lemmatization。
+
+#### Stemming
+
+NLTK includes several off-the-shelf stemmers, and if you ever need a stemmer you should use one of these in preference to crafting your own using regular expressions, since these handle a wide range of irregular cases. Stemming is not a well-defined process, and we typically pick the stemmer that best suits the application we have in mind.
+
+NLTK 自带了很多 stemmer 的工具，不同提取词根工具使用的规则不同，所以产生的结果也不同，在提取词根时工具无所谓好坏，只是不同的工具有不同的适应情形：
+
+```python
+raw = 'a mandate from the masses, not from some farcical aquatic ceremony'
+tokens = nltk.word_tokenize(raw)	
+porter = nltk.PorterStemmer()
+lancaster = nltk.LancasterStemmer()
+[porter.stem(t) for t in tokens]
+[lancaster.stem(t) for t in tokens]	
+```
+
+利用 stemmer 来构建一个词索引表，即单词经过 stemming 处理后作为索引键：
+
+```python
+class IndexedText(object):
+
+    def __init__(self, stemmer, text):
+        self._text = text
+        self._stemmer = stemmer
+        self._index = nltk.Index((self._stem(word), i)
+                                 for (i, word) in enumerate(text))
+
+    def concordance(self, word, width=40):
+        key = self._stem(word)
+        wc = int(width/4)                # words of context
+        for i in self._index[key]:
+            lcontext = ' '.join(self._text[i-wc:i])
+            rcontext = ' '.join(self._text[i:i+wc])
+            ldisplay = '{:>{width}}'.format(lcontext[-width:], width=width)
+            rdisplay = '{:{width}}'.format(rcontext[:width], width=width)
+            print(ldisplay, rdisplay)
+
+    def _stem(self, word):
+        return self._stemmer.stem(word).lower()
+```
+
+#### Lemmatization
+
+lemmatization 处理只有在移除词后缀，仍是词典中的合法单词时，才会移除词缀：
+
+```
+wnl = nltk.WordNetLemmatizer()
+[wnl.lemmatize(t) for t in tokens]
+```
+
+The WordNet lemmatizer is a good choice if you want to compile the vocabulary of some texts and want a list of valid lemmas (or lexicon headwords).
+
+Another normalization task involves identifying non-standard words including numbers, abbreviations, and dates, and mapping any such tokens to a special vocabulary.
+
+此外文本的一般化处理还包括对数字，缩写，日期等非标准 token 的识别和处理。
 
 ### Segmentation 分割问题
 
-Tokenization is an instance of a more general problem of segmentation. 
+Tokenization 可以认为是 segmentation 问题的特例，segmentation 不仅仅包括分割单词，还包括分割句子。
 
-tokenizatin只是分割问题的特例
+#### Sentence Segmentation 句子分割
 
-### Sentence Segmentation 句子分割
+Manipulating texts at the level of individual words often pre-supposes the ability to divide a text into individual sentences. As we have seen, some corpora already provide access at the sentence level. 
 
-Manipulating texts at the level of individual words often presupposes the ability to divide a text into individual sentences. As we have seen, some corpora already provide access at the sentence level. 
+将文本分割为单词通常以将文本分割为句子为基础，NLTK 的部分语料库提供了从语句级别和单词级别来访问文本的方法：
 
-将文本分割为单词通常以将文本分割为句子为基础，NLTK的部分语料库提供了从语句级别访问数据的方法
-
+	# 计算句子的平均长度
 	len(nltk.corpus.brown.words()) / len(nltk.corpus.brown.sents())
 
 In other cases, the text is only available as a stream of characters. Before tokenizing the text into words, we need to segment it into sentences. NLTK facilitates this by including the Punkt sentence segmenter
 
-而在另外一些情形下我们得到的仅仅只是字符数据流，需要我们自己将其分割为语句，NLTK同样提供了语句分割工具
+而在另外一些情形下我们得到的仅仅只是字符数据流，需要我们自己将其分割为语句，NLTK 同样提供了语句分割工具：
 
 	text = nltk.corpus.gutenberg.raw('chesterton-thursday.txt')
 	sents = nltk.sent_tokenize(text)
 
 Sentence segmentation is difficult because period is used to mark abbreviations, and some periods simultaneously mark an abbreviation and terminate a sentence, as often happens with acronyms like U.S.A.
 
-语句分割是比较困难的问题，因为句点常用作语句结尾，但同时也会被用在单词简写中
+语句分割是比较困难的问题，因为句点常用作语句结尾，但同时也会被用在单词简写（如 U.S.A）中。
 
-### Word Segmentation
+#### Word Segmentation 单词分割
 
 For some writing systems, tokenizing text is made more difficult by the fact that there is no visual representation of word boundaries. A similar problem arises in the processing of spoken language, where the hearer must segment a continuous speech stream into individual words.
 
-像中文词之间没有明显的边界，所以分词是更难的，同时像手写识别以及语音识别中也面临同样单词边界模糊的问题
+像中文词之间没有明显的边界，所以分词是更难的，同时像手写识别以及语音识别中也面临同样单词边界模糊的问题。
 
 Our first challenge is simply to represent the problem: we need to find a way to separate text content from the segmentation. We can do this by annotating each character with a boolean value to indicate whether or not a word-break appears after the character. Now the segmentation task becomes a search problem: find the bit string that causes the text string to be correctly segmented into words. With enough data, it is possible to automatically segment text into words with a reasonable degree of accuracy. Such methods can be applied to tokenization for writing systems that don't have any visual representation of word boundaries.
 
-让我们先来形式化这个问题，给定一个文本字符串，再给定一个二进制串，二进制串的意思是当前位置如果为1则表示相应位置字符为分词的边界，如果当前位置为0则表示处于单词内部。因此问题转换为寻找合适的二进制串使得得到的分词结果尽可能的好，如何评价分词结果呢？给定特定的二进制串后可以推导出由该二进制串分割文本产生的单词表以及表示句子的单词表索引序列，然后我们定义一个objective function，该函数值为单词表中所有词汇字符数（额外加1表示单词边界字符）之和加上单词索引序列长度来表示，我们的目标是求objective function的最小值。只要给的数据足够充分，可以使用该分词方法可以给出较好的结果。
+让我们先来形式化这个问题，给定一个文本字符串，再给定一个二进制串，二进制串的意思是当前位置如果为 1 则表示相应位置字符为分词的边界，如果当前位置为 0 则表示处于单词内部。因此问题转换为寻找合适的二进制串使得得到的分词结果尽可能的好，如何评价分词结果呢？给定特定的二进制串后可以推导出由该二进制串分割文本产生的单词表以及表示句子的单词表索引序列，然后我们定义一个 objective function，该函数值为单词表中所有词汇字符数（额外加 1 表示单词边界字符）之和加上单词索引序列长度来表示，我们的目标是求 objective function 的最小值。只要给的数据足够充分，可以使用该分词方法可以给出较好的结果。
 
 Simulated annealing is a heuristic for finding a good approximation to the optimum value of a function in a large, discrete search space, based on an analogy with annealing in metallurgy
 
-模拟退火是用来在较大离散空间中搜索近似最优化问题的启发式方法
+模拟退火是用来在较大离散空间中搜索近似最优化问题的启发式方法：
 
-	# 根据二进制串分词
-	def segment(text, segs):
-	    words = []
-	    last = 0
-	    for i in range(len(segs)):
-	        if segs[i] == '1':
-	            words.append(text[last:i+1])
-	            last = i+1
-	    words.append(text[last:])
-	    return words
-	
-	# 评价分词结果
-	def evaluate(text, segs):
-	    words = segment(text, segs)
-	    text_size = len(words)
-	    lexicon_size = sum(len(word) + 1 for word in set(words))
-	    return text_size + lexicon_size
-	
-	# 查找使得objective function最小化的二进制串（基于非确定性的模拟退火）
-	from random import randint
-	
-	def flip(segs, pos):
-	    return segs[:pos] + str(1-int(segs[pos])) + segs[pos+1:]
-	
-	def flip_n(segs, n):
-	    for i in range(n):
-	        segs = flip(segs, randint(0, len(segs)-1))
-	    return segs
-	
-	def anneal(text, segs, iterations, cooling_rate):
-	    temperature = float(len(segs))
-	    while temperature > 0.5:
-	        best_segs, best = segs, evaluate(text, segs)
-	        for i in range(iterations):
-	            guess = flip_n(segs, round(temperature))
-	            score = evaluate(text, guess)
-	            if score < best:
-	                best, best_segs = score, guess
-	        score, segs = best, best_segs
-	        temperature = temperature / cooling_rate
-	        print(evaluate(text, segs), segment(text, segs))
-	    print()
-	    return segs
-	
-	# 运行结果
-	text = "doyouseethekittyseethedoggydoyoulikethekittylikethedoggy"
-	seg1 = "0000000000000001000000000010000000000000000100000000000"
-	anneal(text, seg1, 5000, 1.2)
+```python
+# 根据二进制串分词
+def segment(text, segs):
+    words = []
+    last = 0
+    for i in range(len(segs)):
+        if segs[i] == '1':
+            words.append(text[last:i+1])
+            last = i+1
+    words.append(text[last:])
+    return words
 
-## Tagging Words
+# 评价分词结果
+def evaluate(text, segs):
+    words = segment(text, segs)
+    text_size = len(words)
+    lexicon_size = sum(len(word) + 1 for word in set(words))
+    return text_size + lexicon_size
+
+# 查找使得objective function最小化的二进制串（基于非确定性的模拟退火）
+from random import randint
+
+def flip(segs, pos):
+    return segs[:pos] + str(1-int(segs[pos])) + segs[pos+1:]
+
+def flip_n(segs, n):
+    for i in range(n):
+        segs = flip(segs, randint(0, len(segs)-1))
+    return segs
+
+def anneal(text, segs, iterations, cooling_rate):
+    temperature = float(len(segs))
+    while temperature > 0.5:
+        best_segs, best = segs, evaluate(text, segs)
+        for i in range(iterations):
+            guess = flip_n(segs, round(temperature))
+            score = evaluate(text, guess)
+            if score < best:
+                best, best_segs = score, guess
+        score, segs = best, best_segs
+        temperature = temperature / cooling_rate
+        print(evaluate(text, segs), segment(text, segs))
+    print()
+    return segs
+
+# 运行结果
+text = "doyouseethekittyseethedoggydoyoulikethekittylikethedoggy"
+seg1 = "0000000000000001000000000010000000000000000100000000000"
+anneal(text, seg1, 5000, 1.2)
+```
+
+# Chapter 5: Categorizing and Tagging Words
 
 Back in elementary school you learnt the difference between nouns, verbs, adjectives, and adverbs. These "word classes" are not just the idle invention of grammarians, but are useful categories for many language processing tasks.
 
 我们在语文课本上学到的动词，名词，形容词等并非单纯语法上的发明，它们在自然语言处理中具有特定的作用。
 
- We will also see how tagging is the second step in the typical NLP pipeline, following tokenization. The process of classifying words into their parts of speech and labeling them accordingly is known as part-of-speech tagging, POS-tagging, or simply tagging. Parts of speech are also known as word classes or lexical categories. The collection of tags used for a particular task is known as a tagset. Our emphasis in this chapter is on exploiting tags, and tagging text automatically.
+ We will also see how tagging is the second step in the typical NLP pipeline, following tokenization. The process of classifying words into their parts of speech and labeling them accordingly is known as **part-of-speech tagging**, **POS-tagging**, or simply **tagging**. Parts of speech are also known as **word classes** or **lexical categories**. The collection of tags used for a particular task is known as a **tag set**. Our emphasis in this chapter is on exploiting tags, and tagging text automatically.
 
-单词标记通常在自然语言处理第一步-tokenization之后进行。对单词根据词性进行分类的过程通常被称为词性标注或者tagging，词性也即词类别。我们想要实现的就是文本的自动标注
+词性标注通常在自然语言处理第一步 tokenization 之后进行。对单词根据词性进行分类的过程通常被称为词性标注或者 tagging，词性也即词类别。我们想要实现的就是文本的自动标注。
 
-We evaluate the performance of a tagger relative to the tags a human expert would assign. Since we don't usually have access to an expert and impartial human judge, we make do instead with gold standard test data. This is a corpus which has been manually annotated and which is accepted as a standard against which the guesses of an automatic system are assessed. The tagger is regarded as being correct if the tag it guesses for a given word is the same as the gold standard tag. Of course, the humans who designed and carried out the original gold standard annotation were only human. Further analysis might show mistakes in the gold standard, or may eventually lead to a revised tagset and more elaborate guidelines. Nevertheless, the gold standard is by definition "correct" as far as the evaluation of an automatic tagger is concerned.
+We evaluate the performance of a tagger relative to the tags a human expert would assign. Since we don't usually have access to an expert and impartial human judge, we make do instead with **gold standard test data**. This is a corpus which has been manually annotated and which is accepted as a standard against which the guesses of an automatic system are assessed. The tagger is regarded as being correct if the tag it guesses for a given word is the same as the gold standard tag. Of course, the humans who designed and carried out the original gold standard annotation were only human. Further analysis might show mistakes in the gold standard, or may eventually lead to a revised tagset and more elaborate guidelines. Nevertheless, the gold standard is by definition "correct" as far as the evaluation of an automatic tagger is concerned.
 
-对标注器的评判是基于标准测试数据集的，这些数据集是经过人工标注的文本，在机器标注文本的过程中会以这些数据集作为标准来改进机器标注器
+对标注器的评判是基于标准测试数据集的，这些数据集是经过人工标注的文本，在机器标注文本的过程中会以这些数据集作为标准来评价并改进机器标注的性能。
 
-### Part-Of-Speech Tagger
+## NLTK Tagger 词性标注器
 
-A part-of-speech tagger, or POS-tagger, processes a sequence of words, and attaches a part of speech tag to each word 
+A part-of-speech tagger, or POS-tagger, processes a sequence of words, and attaches a part of speech tag to each word.
 
-NLTK 词性标注器为单词附加一个表示词性的字段。
+NLTK 词性标注器为单词附加一个表示词性的标记：
 
-	text = nltk.word_tokenize("And now for something completely different")
-	nltk.pos_tag(text)
-	nltk.help.upenn_tagset('RB') # 查询tag的意义
+```python
+# 第一步 tokenization
+text = nltk.word_tokenize("And now for something completely different")
+# 第二步 tagging
+print(nltk.pos_tag(text))
+# [('And', 'CC'), ('now', 'RB'), ('for', 'IN'), ('something', 'NN'), ('completely', 'RB'), ('different', 'JJ')]
 
-词性标注之所以重要，是因为相同词性的单词在文本中具有相似的分布性质，比如NLTK提供了一个`Text.similar(word)`方法，用来统计在文本中同word类似的单词，所谓类似是指当文本出现word1wordword2序列时，如果同时出现word1wdword2序列，则单词wd跟word类似，即寻找具有相同上下文环境的单词，利用该函数我们可以发现一般具有相同上下文的单词会具有相同的词性
+nltk.help.upenn_tagset('RB') # 查询tag的意义
+```
 
-		text = nltk.Text(word.lower() for word in nltk.corpus.brown.words())
-		text.similar('woman')
-		text.similar('the')
-### Representing Tagged Tokens
+### 相同词性暗示着相似的上下文环境
 
-在nltk中tagged token被写作tuple，其中包含token和tag，并且支持我们用特定语法来创建tagged token
+词性标注之所以重要，是因为相同词性的单词在文本中具有相似的分布性质。NLTK 提供了一个`Text.similar(word)` 方法，用来统计在文本中同 word 类似的单词，所谓“类似”是指当文本出现同时出现 `word1Pword2` 和 `word1Qword2` 序列时，则单词 P 跟 Q 是类似的，即寻找具有相同上下文环境的单词，利用该函数我们可以发现具有相同上下文的单词往往也会具有相同的词性：
 
-	tagged_token = nltk.tag.str2tuple('fly/NN') # ('fly', 'NN')
+```python
+text = nltk.Text(word.lower() for word in nltk.corpus.brown.words())
+text.similar('woman')
+text.similar('the')
+```
+### 根据词性推断未登录词
 
-### Reading Tagged Corpora
-nltk中的某些语料库是经过标注的，并一致的提供了方法`tagged_words`来访问被标注的单词，并且当语料库提供了分割的语句时，则可以通过`tagged_sents`来访问标注后的语句
+A tagger can also model our knowledge of unknown words, e.g. we can guess that scrobbling is probably a verb, with the root scrobble, and likely to occur in contexts like he was scrobbling.
+
+## Tagged Corpora 词性标注语料库
+
+### 表示被标注的 token
+
+在 nltk 中 tagged token 被写作 tuple，其中包含 token 和 tag，并且支持我们用特定语法来创建 tagged token
+
+```python
+text = text = nltk.word_tokenize("there is an apple")
+nltk.pos_tag(text) # [('there', 'EX'), ('is', 'VBZ'), ('an', 'DT'), ('apple', 'NN')]
+
+tagged_token = nltk.tag.str2tuple('fly/NN') # ('fly', 'NN')
+tagged_token = nltk.tag.str2tuple("The/AT grand/JJ jury/NN commented/VBD on/IN a/AT number/NN of/IN")
+```
+
+### 查看语料库的标注
+nltk 中的某些语料库是经过标注的，我们可以直接查看其标注文件，格式类似下面：
+
+The/at Fulton/np-tl County/nn-tl Grand/jj-tl Jury/nn-tl said/vbd Friday/nr an/at investigation/nn of/in Atlanta's/np
+
+我们也可以通过接口来访问， `tagged_words` 来访问被标注的单词，并且当语料库提供了分割的语句时，则可以通过 `tagged_sents` 来访问标注后的语句
 
 	nltk.corpus.brown.tagged_words()
 	nltk.corpus.brown.tagged_words(tagset='universal')
@@ -903,23 +1124,51 @@ nltk中的某些语料库是经过标注的，并一致的提供了方法`tagged
 	nltk.corpus.conll2000.tagged_words()
 	nltk.corpus.treebank.tagged_words()
 
-### Tagset
+Tagged corpora for several other languages are distributed with NLTK, including Chinese, Hindi, Portuguese, Spanish, Dutch and Catalan.
 
-下面是一个简单的标注集
+### 词性和上下文
 
-	Tag 	Meaning 	English Examples
-	ADJ 	adjective 	new, good, high, special, big, local
-	ADP 	adposition 	on, of, at, with, by, into, under
-	ADV 	adverb 	really, already, still, early, now
-	CONJ 	conjunction 	and, or, but, if, while, although
-	DET 	determiner, article 	the, a, some, most, every, no, which
-	NOUN 	noun 	year, home, costs, time, Africa
-	NUM 	numeral 	twenty-four, fourth, 1991, 14:24
-	PRT 	particle 	at, on, out, over per, that, up, with
-	PRON 	pronoun 	he, their, her, its, my, I, us
-	VERB 	verb 	is, say, told, given, playing, would
-	. 	punctuation marks 	. , ; !
-	X 	other 	ersatz, esprit, dunno, gr8, univeristy
+词性往往是上下文相关的，也即一个词往往会被标注为若干词性，在不同的上下文中该词的词性也许会不同，由此可以区分该词在不同上下文具有不同含义。
+
+统计单词 often 之后不同词性出现的频率：
+
+```
+from nltk.corpus import brown
+brown_lrnd_tagged = brown.tagged_words(categories='learned', tagset='universal')
+tags = [b[1] for (a, b) in nltk.bigrams(brown_lrnd_tagged) if a[0] == 'often']
+fd = nltk.FreqDist(tags)
+fd.tabulate()
+```
+
+统计所有“动词+to+动词”的短语：
+
+```
+from nltk.corpus import brown
+for tagged_sent in brown.tagged_sents():
+	for (w1, t1), (w2, t2), (w3, t3) in nltk.trigrams(tagged_sent):
+		if t1.startswith('V') and t2 == 'TO' and t3.startswith('V'):
+			print(w1, w2, w3)
+```
+
+单词的词性往往具有歧义：
+
+```
+from nltk.corpus import brown
+brown_news_tagged = brown.tagged_words(categories='news', tagset='universal')
+data = nltk.ConditionalFreqDist((word.lower(), tag) for in brown_news_tagged)
+for word in sorted(data.conditions()):
+	if len(data[word]) > 3:
+		tags = [tag for (tag, _) in data[word].most_common()]
+		print(word, ' '.join(tags))
+```
+
+## Tagset 标注集
+
+所谓标注集就是指单词类别；不同的语料库一般都会有自己定义的标注集。
+
+### A Universal Part-of-Speech Tagset 标注集
+
+![](part-of-speech-tagset.png)
 
 统计哪些标注用的比较多
 
@@ -929,152 +1178,146 @@ nltk中的某些语料库是经过标注的，并一致的提供了方法`tagged
 	tag_fd = nltk.FreqDist(tag for (word, tag) in brown_news_tagged)
 	tag_fd.plot(cumulative=True)
 
-### Nouns
+We can use these tags to do powerful searches using a graphical POS-concordance tool `nltk.app.concordance()`. Use it to search for any combination of words and POS tags.
+
+### Nouns 名词
 
 Nouns generally refer to people, places, things, or concepts, e.g.: woman, Scotland, book, intelligence. Nouns can appear after determiners and adjectives, and can be the subject or object of the verb
 
-名词通常用来表示人，物或地点等，名词可以出现在冠词和形容词后，名词可以充当动词的主语或者宾语，普通名词标注为N，专有名词标注为NP
+名词通常用来表示人，物或地点等，名词可以出现在冠词和形容词后，名词可以充当动词的主语或者宾语，普通名词标注为 N，专有名词标注为 NP
 
-统计名词经常出现在什么词后面
+统计名词经常出现在什么词后面：
 
-	from nltk.corpus import brown
-	brown_news_tagged = brown.tagged_words(categories='news', tagset='universal')
-	word_tag_pairs = nltk.bigrams(brown_news_tagged) # 构造经过标注后的单词二元组
-	noun_preceders = [a[1] for (a, b) in word_tag_pairs if b[1] == 'NOUN'] # 统计名词前面单词的词性
-	fdist = nltk.FreqDist(noun_preceders)
-	fdist.most_commont() # 根据结果可知名词经常出现在冠词，形容词，动词后面
+```python
+from nltk.corpus import brown
+brown_news_tagged = brown.tagged_words(categories='news', tagset='universal')
+word_tag_pairs = nltk.bigrams(brown_news_tagged) # 构造经过标注后的单词二元组
+noun_preceders = [a[1] for (a, b) in word_tag_pairs if b[1] == 'NOUN'] # 统计名词前面单词的词性
+fdist = nltk.FreqDist(noun_preceders)
+fdist.most_common() # 根据结果可知名词经常出现在冠词，形容词，动词后面
+```
 
-### Verbs
+### Verbs 动词
 
 Verbs are words that describe events and actions. In the context of a sentence, verbs typically express a relation involving the referents of one or more noun phrases.
 
-动词通常用来表示多个名词之间的某种关系
+动词通常用来表示多个名词之间的某种关系。
 
-统计一个词的不同词性出现频率
+统计单词 refuse 的不同词性出现频率：
 
 	wsj = nltk.corpus.treebank.tagged_words(tagset='universal')
 	cfd = nltk.ConditionalFreqDist(wsj)
 	cfd['refuse'].most_common()
 
-统计词性对应单词
+统计动词词性相应的单词：
 
 	wsj = nltk.corpus.treebank.tagged_words(tagset='universal')
 	cfd = nltk.ConditionalFreqDist((tag, word) for (word, tag) in wsj)
 	cfd['VBN'].most_common()
 
 
-观察过去式（past tense）和过去分词（past participle）前面是什么词汇
+观察过去式（past tense）和过去分词（past participle）前面是什么词汇：
 
 	wsj = nltk.corpus.treebank.tagged_words()
 	idx1 = wsj.index(('kicked', 'VBD'))
 	idx2 = wsj.index(('kicked', 'VBN'))
 	wsj[idx1-4:idx1+1]
-	wsj[idx2-4:idx2+1] # 可以看到过去分词前有has
+	wsj[idx2-4:idx2+1] # 可以看到过去分词前有 has
 
-### Adjectives and Adverbs
+### Adjectives and Adverbs 形容词和副词
  Adjectives describe nouns, and can be used as modifiers (e.g. large in the large pizza), or in predicates (e.g. the pizza is large)
 
-形容词用来描述名词，可以作为修饰名词的成分或者也可作为谓语
+形容词用来描述名词，可以作为修饰名词的成分或者也可作为谓语。
 
 Adverbs modify verbs to specify the time, manner, place or direction of the event described by the verb (e.g. quickly in the stocks fell quickly). Adverbs may also modify adjectives (e.g. really in Mary's teacher was really nice).
 
-副词用来修饰动词，为动词指定时间，地点，方式等，此外副词还可以用来修饰形容词
+副词用来修饰动词，为动词指定时间，地点，方式等，此外副词还可以用来修饰形容词。
 
-### POS-Tags and Context
+## Automatic Tagging 自动标注词性
 
-词性往往是上下文相关的，也即一个词往往会被标注为若干词性，在不同的上下文中该词的词性也许会不同，由此可以区分该词在不同上下文具有不同含义
+we will explore various ways to automatically add part-of-speech tags to text. We will see that the tag of a word depends on the word and its context within a sentence. For this reason, we will be working with data at the level of (tagged) sentences rather than words. 
 
-统计单词often之后不同词性出现的频率
+单词的词性标注以来于单词自身以及单词所处的上下文，并且需要借助人工标注好的文本来实现计算机自动文本标注。由于词性标注会依赖上下文，因此标注工作一般以句子为单位进行。
 
-	from nltk.corpus import brown
-	brown_lrnd_tagged = brown.tagged_words(categories='learned', tagset='universal')
-	tags = [b[1] for (a, b) in nltk.bigrams(brown_lrnd_tagged) if a[0] == 'often']
-	fd = nltk.FreqDist(tags)
-	fd.tabulate()
-
-统计所有动词+to+动词的短语
-
-	from nltk.corpus import brown
-	for tagged_sent in brown.tagged_sents():
-		for (w1, t1), (w2, t2), (w3, t3) in nltk.trigrams(tagged_sent):
-			if t1.startswith('V') and t2 == 'TO' and t3.startswith('V'):
-				print(w1, w2, w3)
-
-### Automatic Tagging 自动标注文本
-
-we will explore various ways to automatically add part-of-speech tags to text. We will see that the tag of a word depends on the word and its context within a sentence.
-
-单词的标注以来于单词自身以及单词所处的上下文，并且需要借助人工标注好的文本来实现计算机自动文本标注
-
-### The Default Tagger
+### The Default Tagger 基线标注器
 
 The simplest possible tagger assigns the same tag to each token. In order to get the best result, we tag each word with the most likely tag.
 
-最简单的标注器，将所有单词统一标注为最可能的词性，该标注器有个特点，即使在人工标注中未出现的单词也会被标注词性
+最简单的标注器，将所有单词统一标注为最可能的词性（即文本中出现频率最高的词性）。可以将该标注器作为其它标注器的 baseline。该标注器有个特点，即使在人工标注中未出现的单词也会被标注词性。
 
-	import nltk
-	from nltk.corpus import brown
-	brown_tagged_sents = brown.tagged_sents(categories='news')
-	brown_sents = brown.sents(categories='news')
-	
-	# 从人工标记文本中找出最高频率的词性
-	tags = [tag for (word, tag) in brown.tagged_words(categories='news')]
-	tag = nltk.FreqDist(tags).max() # 是名词NN
-	
-	raw = 'I do not like green eggs and ham, I do not like them Sam I am!'
-	tokens = nltk.word_tokenize(raw)
-	default_tagger = nltk.DefaultTagger(tag)
-	default_tagger.tag(tokens) # 将所有token标注为名词
-	default_tagger.evaluate(brown_tagged_sents) # 同人工标注数据进行对比评价，正确率在1/8左右
+```python
+import nltk
+from nltk.corpus import brown
+brown_tagged_sents = brown.tagged_sents(categories='news')
+brown_sents = brown.sents(categories='news')
+
+# 从人工标记文本中找出最高频率的词性
+tags = [tag for (word, tag) in brown.tagged_words(categories='news')]
+tag = nltk.FreqDist(tags).max() # 是名词NN
+
+raw = 'I do not like green eggs and ham, I do not like them Sam I am!'
+tokens = nltk.word_tokenize(raw)
+default_tagger = nltk.DefaultTagger(tag)
+default_tagger.tag(tokens) # 将所有token标注为名词
+
+default_tagger.evaluate(brown_tagged_sents) # 同人工标注数据进行对比评价，正确率在1/8左右
+```
 
 ### The Regular Expression Tagger 正则标注器
-The regular expression tagger assigns tags to tokens on the basis of matching patterns. For instance, we might guess that any word ending in ed is the past participle of a verb, and any word ending with 's is a possessive noun.
+The regular expression tagger assigns tags to tokens on the basis of matching patterns. For instance, we might guess that any word ending in "ed" is the past participle of a verb, and any word ending with 's is a possessive noun.
 
-基于正则表达式的标注器，如果单词匹配了正则表达式，则赋予相应的词性。该标注器基于这样的假设，过去式一般以ed结尾，名词所有格一般以's结尾
+基于正则表达式的标注器，如果单词匹配了正则表达式，则赋予相应的词性。该标注器基于一些规则，如：过去式一般以 ed 结尾，名词所有格一般以 's 结尾等。
 
-	import nltk
-	from nltk.corpus import brown
-	brown_tagged_sents = brown.tagged_sents(categories='news')
-	brown_sents = brown.sents(categories='news')
-	# 根据下面顺序，匹配的第一个作为单词的词性
-	patterns = [
-		(r'.*ing$', 'VBG'),               # gerunds
-		(r'.*ed$', 'VBD'),                # simple past
-		(r'.*es$', 'VBZ'),                # 3rd singular present
-		(r'.*ould$', 'MD'),               # modals
-		(r'.*\'s$', 'NN$'),               # possessive nouns
-		(r'.*s$', 'NNS'),                 # plural nouns
-		(r'^-?[0-9]+(.[0-9]+)?$', 'CD'),  # cardinal numbers
-		(r'.*', 'NN')                     # nouns (default)
-	]
-	
-	regexp_tagger = nltk.RegexpTagger(patterns)
-	regexp_tagger.tag(brown_sents[3])
-	regexp_tagger.evaluate(brown_tagged_sents) # 大概1/5的准确率
+```python
+import nltk
+from nltk.corpus import brown
+brown_tagged_sents = brown.tagged_sents(categories='news')
+brown_sents = brown.sents(categories='news')
+# 根据下面顺序，匹配的第一个作为单词的词性
+patterns = [
+	(r'.*ing$', 'VBG'),               # gerunds
+	(r'.*ed$', 'VBD'),                # simple past
+	(r'.*es$', 'VBZ'),                # 3rd singular present
+	(r'.*ould$', 'MD'),               # modals
+	(r'.*\'s$', 'NN$'),               # possessive nouns
+	(r'.*s$', 'NNS'),                 # plural nouns
+	(r'^-?[0-9]+(.[0-9]+)?$', 'CD'),  # cardinal numbers
+	(r'.*', 'NN')                     # nouns (default)
+]
+
+regexp_tagger = nltk.RegexpTagger(patterns)
+regexp_tagger.tag(brown_sents[3])
+
+regexp_tagger.evaluate(brown_tagged_sents) # 大概1/5的准确率
+```
 
 ### The Lookup Tagges 查表标注器
 
 A lot of high-frequency words do not have the NN tag. Let's find the hundred most frequent words and store their most likely tag. We can then use this information as the model for a "lookup tagger" 
 
-许多高频词并不是名词，为了准确标注这些高频词，可以先从人工标注文本中查询这些高频词最可能的词性，并将查询结果制作为一个表，自动标注文本时，通过查询该表来标注高频词，下面的例子仅仅有了前100个高频词得词性表就可以达到50%的标注正确率
+许多高频词并不是名词，为了准确标注这些高频词，可以先从人工标注文本中查询这些高频词最可能的词性，并将查询结果制作为一个表，自动标注文本时，通过查询该表来标注高频词（其余词标注为名词），下面的例子仅仅有了前 100 个高频词得词性表就可以达到 50% 的标注正确率：
 
 	import nltk
 	from nltk.corpus import brown
-	brown_tagged_sents = brown.tagged_sents(categories='news')
+	
 	brown_sents = brown.sents(categories='news')
+	brown_tagged_sents = brown.tagged_sents(categories='news')
 	
+	# 用于查找前 100 高频词
 	fd = nltk.FreqDist(w for w in brown.words(categories='news'))
+	# 用于查找高频词最可能的词性
 	cfd = nltk.ConditionalFreqDist((w, t) for (w, t) in brown.tagged_words(categories='news'))
-	
+	# 生成词性查询表
 	likely_tags = dict((w, cfd[w].max()) for (w, _) in fd.most_common(100))
+	
 	baseline_tagger = nltk.UnigramTagger(model=likely_tags)
 	baseline_tagger.tag(brown_sents[3])
 	baseline_tagger.evaluate(brown_tagged_sents) # 大概1/2的准确率
 	
-	baseline_tagger = nltk.UnigramTagger(model=likely_tags, backoff=nltk.DefaultTagger('NN')) # 当单词不在高频词表中时，指定一个回退的tagger来估计词性
+	baseline_tagger = nltk.UnigramTagger(model=likely_tags, backoff=nltk.DefaultTagger('NN')) # 当单词不在高频词表中时，指定一个回退的 tagger 来估计词性
 	baseline_tagger.evaluate(brown_tagged_sents) # 现在准确率将近有60%
 
-观察高频词标注表大小，对标准准确率的影响，一开始增加词表的大小，标注准确率显著上升，后来增加词表大小对标准准确率的影响变小
+观察高频词标注表大小，对标准准确率的影响，一开始增加词表的大小，标注准确率显著上升，后来增加词表大小对标准准确率的影响变小：
 
 	def performance(cfd, wordlist):
 	    lt = dict((word, cfd[word].max()) for word in wordlist)
@@ -1098,11 +1341,11 @@ A lot of high-frequency words do not have the NN tag. Let's find the hundred mos
 	    pylab.ylabel('Performance')
 	    pylab.show()
 
-### N-Gram Tagging
+### N-Gram Tagging N-元文法标注器
 
 Unigram taggers are based on a simple statistical algorithm: for each token, assign the tag that is most likely for that particular token. A unigram tagger behaves just like a lookup tagger, except there is a more convenient technique for setting it up, called training.
 
-Unigram Tagger 基于一个简单的统计假设，将单词标注为人工标注集中该单词出现频率最高的词性。该标注类似于查表标注器，不过该标注器有一个根据数据训练的过程，训练的实质就是根据给定的训练数据，标注器内部会记录每个单词出现频率最高的词性，以便在标注文本时使用
+Unigram Tagger 基于一个简单的统计假设，将单词标注为人工标注集中该单词出现频率最高的词性。该标注类似于查表标注器，不过该标注器有一个根据数据训练的过程，训练的实质就是根据给定的训练数据，标注器内部会记录每个单词出现频率最高的词性，以便在标注文本时使用：
 
 	from nltk.corpus import brown
 	brown_tagged_sents = brown.tagged_sents(categories='news')
@@ -1118,7 +1361,7 @@ Unigram Tagger 基于一个简单的统计假设，将单词标注为人工标�
 
 When we perform a language processing task based on unigrams, we are using one item of context. In the case of tagging, we only consider the current token, in isolation from any larger context. Given such a model, the best we can do is tag each word with its a priori most likely tag. This means we would tag a word such as wind with the same tag, regardless of whether it appears in the context the wind or to wind. An n-gram tagger is a generalization of a unigram tagger whose context is the current word together with the part-of-speech tags of the n-1 preceding tokens.
 
-前面的标注器，假设单词的上下文只是自己，根据自己先验的可能性来对文本进行词性标注，但在现实中单词往往具有上下文环境的，n-gram tagger正是基于这一点提出的，假设单词的跟前面的n-1个单词是上下文相关的，也就是说当前单词的词性取决于单词自己以及前面n-1个单词的词性，下面是一个构建的三元模型，可以利用它来标注文本
+前面的标注器，假设单词的上下文只是自己，根据自己先验的可能性来对文本进行词性标注，但在现实中单词往往具有上下文环境的，n-gram tagger 正是基于这一点提出的，假设单词的跟前面的 n-1 个单词是上下文相关的，也就是说当前单词的词性取决于单词自己以及前面 n-1 个单词的词性，下面是一个构建的三元模型，可以利用它来标注文本：
 
 
 	from nltk.corpus import brown
@@ -1136,16 +1379,16 @@ When we perform a language processing task based on unigrams, we are using one i
 	
 	cfd[('VERB', 'NN', 'quick')].max() # 单词quick前两个词分别为动词和名词时，quick的词性
 
-NLTK 自带了可以训练N-Gram Tagger的工具
+NLTK 自带了可以训练 N-Gram Tagger 的工具：
 
-	# 2-gram tagger，该标注器遇到训练集中未出现的单词时将词性标注为None，这样会导致后续单词的上下文为None，因此导致后续单词词性都被标注为None，因此它的评分很低
+	# 2-gram tagger，该标注器遇到训练集中未出现的单词时将词性标注为 None，这样会导致后续单词的上下文为None，因此导致后续单词词性都被标注为 None，因此它的评分很低
 	bigram_tagger = nltk.BigramTagger(train_sents)
 	bigram_tagger.evaluate(test_sents)
 
 
 One way to address the trade-off between accuracy and coverage is to use the more accurate algorithms when we can, but to fall back on algorithms with wider coverage when necessary. 
 
-上面的问题是，当遇到训练集中未出现的单词时，也即遇到了未知的上下文，此时标注失败，当前单词标注失败又会导致后续单词的标注失败，且随着n-gram的n增大，遇到未知上下文的情况会变多，这样导致了该标注器准确率很低，这是在自然语言处理中经常遇到的数据稀疏的问题，当考虑的上下文越丰富则意味着标注越准确，但是丰富的上下文意味着小样本，对于很多文本结构没有覆盖到。一种折中的方案是，使用多个标注器，当精度较高的tagger失效时，回退到覆盖率高的tagger
+上面的问题是，当遇到训练集中未出现的单词时（未登录词），也即遇到了未知的上下文，此时标注失败，当前单词标注失败又会导致后续单词的标注失败，且随着 n-gram 的 n 增大，遇到未知上下文的情况会变多，这样导致了该标注器准确率很低，这是在自然语言处理中经常遇到的数据稀疏的问题，当考虑的上下文越丰富则意味着标注越准确，但是丰富的上下文意味着小样本，对于很多文本结构没有覆盖到。一种折中的方案是，使用多个标注器，当精度较高的 tagger 失效时，回退到覆盖率高的 tagger
 
 	# 如果bigram tagger失效时，则使用uigram tagger，当uigram tagger失效时，则使用默认标注器
 	t0 = nltk.DefaultTagger('NN')
@@ -1153,10 +1396,14 @@ One way to address the trade-off between accuracy and coverage is to use the mor
 	t2 = nltk.BigramTagger(train_sents, backoff=t1)
 	t2.evaluate(test_sents) # 准确率达80%以上
 
-### Tagging Unknown Words
-Our approach to tagging unknown words still uses backoff to a regular-expression tagger or a default tagger. These are unable to make use of context. Thus, if our tagger encountered the word blog, not seen during training, it would assign it the same tag, regardless of whether this word appeared in the context the blog or to blog. How can we do better with these unknown words, or out-of-vocabulary items? A useful method to tag unknown words based on context is to limit the vocabulary of a tagger to the most frequent n words, and to replace every other word with a special word UNK.
+### Tagging Unknown Words 标注未登录词
+Our approach to tagging unknown words still uses backoff to a regular-expression tagger or a default tagger. These are unable to make use of context. Thus, if our tagger encountered the word blog, not seen during training, it would assign it the same tag, regardless of whether this word appeared in the context the blog or to blog. How can we do better with these unknown words, or out-of-vocabulary items? 
 
-当我们能遇到训练集中没有出现的单词时，没有上下文可以参考，这时会回退到default tagger或者regular-expression tagger，这样不论该单词出现在什么上下中都会被标注为同一词性。一个有效的方法是，将低频词都替换为特殊token，例如UNK，这样在训练时n-gram tagger会为UNK进行词性标注
+A useful method to tag unknown words based on context is to limit the vocabulary of a tagger to the most frequent n words, and to replace every other word with a special word UNK.
+
+当我们能遇到训练集中没有出现的单词时，没有上下文可以参考，这时会回退到 default tagger 或者 regular-expression tagger，这样的缺点是：不论该单词出现在什么上下中都会被标注为同一词性。
+
+一个可以让未登录词标注时也依赖上下文环境的方法是：将低频词都替换为特殊 token，例如 UNK，这样在训练时 n-gram tagger 会为 UNK 进行词性标注。
 
 ### Storing Taggers
 Training a tagger on a large corpus may take a significant time. Instead of training a tagger every time we need one, it is convenient to save a trained tagger in a file for later re-use.
@@ -1182,10 +1429,10 @@ What is the upper limit to the performance of an n-gram tagger? Consider the cas
 下面让我们来衡量一下n-gram tagger的性能，这里以3-gram为例，并且将二义性上下文所占百分比作为tagger性能衡量的依据，所谓上下文的二义性是指已知上下文时，单词有多个词性对应
 
 	cfd = nltk.ConditionalFreqDist(((x[1], y[1], z[0]), z[1]) for tagged_sent in nltk.corpus.brown.tagged_sents(categories='news') for (x, y, z) in nltk.trigrams(tagged_sent))
-
-    ambiguous_contexts = [c for c in cfd.conditions() if len(cfd[c])>1]
-
-    sum([cfd[c].N() for c in ambiguous_contexts])/cfd.N() # 二义性上下文大概不到5%，如果我们再从二义性上下文中挑选最可能的词性来建模，我们tagger的准确程度是十分高的
+	
+	ambiguous_contexts = [c for c in cfd.conditions() if len(cfd[c])>1]
+	
+	sum([cfd[c].N() for c in ambiguous_contexts])/cfd.N() # 二义性上下文大概不到5%，如果我们再从二义性上下文中挑选最可能的词性来建模，我们tagger的准确程度是十分高的
 
 此外我们可以通过跟人工标注文本对比标注器的结果
 
@@ -1249,7 +1496,9 @@ Common tagsets often capture some morpho-syntactic information; that is, informa
 
 在标注单词时如果可以标注出单词在语句中的用法将会很有用，比如单词go有gone，goes，went等形式，显然应该予以区分，还有系动词会被标注为：be/BE, being/BEG, am/BEM, are/BER, is/BEZ, been/BEN, were/BED and was/BEDZ。这样的标注有利用对文本进行morphological analysis
 
-## Classify Text
+
+
+# Chapter 6: Learning to Classify Text
 
 Detecting patterns is a central part of Natural Language Processing. Words ending in -ed tend to be past tense verbs. Frequent use of will is indicative of news text. These observable patterns — word structure and word frequency — happen to correlate with particular aspects of meaning, such as tense and topic. But how did we know where to start looking, which aspects of form to associate with which aspects of meaning?
 
@@ -1718,7 +1967,7 @@ Most models that are automatically constructed from a corpus are descriptive mod
 英文单词通常是冗余的，一般来说去掉单词中间（单词开头和尾部的元音字母不能去掉）的元音字母也不会影响阅读，下面是一个对文本去冗余的程序
 
 	import re, nltk
-
+	
 	def compress(word):
 		regexp = r'^[AEIOUaeiou]+|[AEIOUaeiou]+$|[^AEIOUaeiou]+'
 		pieces = re.findall(regexp, word)
@@ -1730,7 +1979,7 @@ Most models that are automatically constructed from a corpus are descriptive mod
 英语单词存在词根问题，一个单词往往会有多个形式，在搜索引擎中我们常常想将用户提供的单词提取词根后再进行文档的搜索，下面是一个提取单词词根的程序
 
 	import re, nltk
-
+	
 	def stem(word):
 		regexp = r'^(.*?)(ing|ly|ed|ious|ies|ive|es|s|ment)?$'
 		stem, suffix = re.findall(regexp, word)[0]
@@ -1748,7 +1997,7 @@ Most models that are automatically constructed from a corpus are descriptive mod
 为文本基于词根构建索引工具
 
 	class IndexedText(object):
-
+	
 	    def __init__(self, stemmer, text):
 	        self._text = text
 	        self._stemmer = stemmer
@@ -2028,7 +2277,7 @@ trie树
 某单词前置词性确定时，统计该单词的词性，也即已知前置词性，推断当前单词的词性
 
 	from nltk.corpus import brown
-
+	
 	pos = defaultdict(lambda: defaultdict(int))
 	brown_news_tagged = brown.tagged_words(categories='news', tagset='universal')
 	for ((w1, t1), (w2, t2)) in nltk.bigrams(brown_news_tagged):
@@ -2039,7 +2288,7 @@ trie树
 构建反转字典
 
 	dict((value, key) for (key, value) in d.items()) # 仅当键值对一一对应时适用
-
+	
 	# 支持多个键对应同一值的反转
 	from collections import defaultdict
 	rd = defaultdict(list)
