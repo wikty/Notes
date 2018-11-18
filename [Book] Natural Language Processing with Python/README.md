@@ -1233,6 +1233,24 @@ Adverbs modify verbs to specify the time, manner, place or direction of the even
 
 副词用来修饰动词，为动词指定时间，地点，方式等，此外副词还可以用来修饰形容词。
 
+### Morphology in Part of Speech Tagsets 含有词形态信息的标注集
+
+Common tagsets often capture some morpho-syntactic information; that is, information about the kind of morphological markings that words receive by virtue of their syntactic role. 
+
+在标注单词时如果可以标注出单词在语句中的用法将会很有用，比如单词 go 有 gone，goes，went 等形式，显然应该予以区分，还有系动词会被标注为：be/BE, being/BEG, am/BEM, are/BER, is/BEZ, been/BEN, were/BED and was/BEDZ。这样的标注有利用对文本进行 morphological analysis。
+
+如 Brown 语料库对 go/gone/goes/went 的标注：
+
+![](brown-tagset-of-go.png)
+
+Most part-of-speech tagsets make use of the same basic categories, such as noun, verb, adjective, and preposition. However, tagsets differ both in how finely they divide words into categories, and in how they define their categories.
+
+This variation in tagsets is unavoidable, since part-of-speech tags are used in different ways for different tasks. In other words, there is no one 'right way' to assign tags, only more or less useful ways depending on one's goals.
+
+不同标注集对类别的划分以及定义都是不同的，没有哪种是最好的，都是根据具体的应用场景来定义最为合适的标注集而已。
+
+For tagset documentation, see `nltk.help.upenn_tagset()` and `nltk.help.brown_tagset()`.
+
 ## Automatic Tagging 自动标注词性
 
 we will explore various ways to automatically add part-of-speech tags to text. We will see that the tag of a word depends on the word and its context within a sentence. For this reason, we will be working with data at the level of (tagged) sentences rather than words. 
@@ -1379,14 +1397,19 @@ When we perform a language processing task based on unigrams, we are using one i
 	
 	cfd[('VERB', 'NN', 'quick')].max() # 单词quick前两个词分别为动词和名词时，quick的词性
 
+3-gram tagger 的逻辑：
+
+![](n-gram-tagger-context.png)
+
 NLTK 自带了可以训练 N-Gram Tagger 的工具：
 
 	# 2-gram tagger，该标注器遇到训练集中未出现的单词时将词性标注为 None，这样会导致后续单词的上下文为None，因此导致后续单词词性都被标注为 None，因此它的评分很低
 	bigram_tagger = nltk.BigramTagger(train_sents)
 	bigram_tagger.evaluate(test_sents)
 
+### Combining Tagger 组合标注器
 
-One way to address the trade-off between accuracy and coverage is to use the more accurate algorithms when we can, but to fall back on algorithms with wider coverage when necessary. 
+As *n* gets larger, the specificity of the contexts increases, as does the chance that the data we wish to tag contains contexts that were not present in the training data. This is known as the **sparse data** problem, and is quite pervasive in NLP. As a consequence, there is a trade-off between the **accuracy** and the **coverage** of our results. One way to address the trade-off between accuracy and coverage is to use the more accurate algorithms when we can, but to fall back on algorithms with wider coverage when necessary. 
 
 上面的问题是，当遇到训练集中未出现的单词时（未登录词），也即遇到了未知的上下文，此时标注失败，当前单词标注失败又会导致后续单词的标注失败，且随着 n-gram 的 n 增大，遇到未知上下文的情况会变多，这样导致了该标注器准确率很低，这是在自然语言处理中经常遇到的数据稀疏的问题，当考虑的上下文越丰富则意味着标注越准确，但是丰富的上下文意味着小样本，对于很多文本结构没有覆盖到。一种折中的方案是，使用多个标注器，当精度较高的 tagger 失效时，回退到覆盖率高的 tagger
 
@@ -1397,7 +1420,7 @@ One way to address the trade-off between accuracy and coverage is to use the mor
 	t2.evaluate(test_sents) # 准确率达80%以上
 
 ### Tagging Unknown Words 标注未登录词
-Our approach to tagging unknown words still uses backoff to a regular-expression tagger or a default tagger. These are unable to make use of context. Thus, if our tagger encountered the word blog, not seen during training, it would assign it the same tag, regardless of whether this word appeared in the context the blog or to blog. How can we do better with these unknown words, or out-of-vocabulary items? 
+Our approach to tagging unknown words still uses backoff to a regular-expression tagger or a default tagger. These are unable to make use of context. Thus, if our tagger encountered the word blog, not seen during training, it would assign it the same tag, regardless of whether this word appeared in the context the blog or to blog. How can we do better with these **unknown words**, or **out-of-vocabulary items**? 
 
 A useful method to tag unknown words based on context is to limit the vocabulary of a tagger to the most frequent n words, and to replace every other word with a special word UNK.
 
@@ -1405,157 +1428,186 @@ A useful method to tag unknown words based on context is to limit the vocabulary
 
 一个可以让未登录词标注时也依赖上下文环境的方法是：将低频词都替换为特殊 token，例如 UNK，这样在训练时 n-gram tagger 会为 UNK 进行词性标注。
 
-### Storing Taggers
+### Storing Taggers 保存标注器
 Training a tagger on a large corpus may take a significant time. Instead of training a tagger every time we need one, it is convenient to save a trained tagger in a file for later re-use.
 
-基于大语料库训练tagger需要花费很多时间，我们没必要每次都训练tagger，可以训练好后保存到文件中
+基于大语料库训练 tagger 需要花费很多时间，我们没必要每次都训练 tagger，可以训练好后保存到文件中
 
-	# dump
-	from pickle import dump
-	t0 = nltk.DefaultTagger('NN')
-	output = open('t0.pkl', 'wb')
-	dump(t0, output, -1)
-	output.close()
-	
-	# load
-	from pickle import load
-	input = open('t0.pkl', 'r')
-	tagger = load(input)
-	input.close()
+```python
+# dump
+from pickle import dump
+t0 = nltk.DefaultTagger('NN')
+output = open('t0.pkl', 'wb')
+dump(t0, output, -1)
+output.close()
 
-### Performance Limitations 标注器的性能
+# load
+from pickle import load
+input = open('t0.pkl', 'r')
+tagger = load(input)
+input.close()
+```
+
+### N-gram Tagger Performance Limitations 标注器的性能
+#### 性能上限
+
 What is the upper limit to the performance of an n-gram tagger? Consider the case of a trigram tagger. How many cases of part-of-speech ambiguity does it encounter?
 
-下面让我们来衡量一下n-gram tagger的性能，这里以3-gram为例，并且将二义性上下文所占百分比作为tagger性能衡量的依据，所谓上下文的二义性是指已知上下文时，单词有多个词性对应
+下面让我们来衡量一下 n-gram tagger 的性能，这里以 3-gram 为例。标注语料库中词性歧义所占比例将是 n-gram tagger 标注器所能够达到的性能上限，所谓词性歧义是指已知上下文时，单词有多个词性对应：
 
 	cfd = nltk.ConditionalFreqDist(((x[1], y[1], z[0]), z[1]) for tagged_sent in nltk.corpus.brown.tagged_sents(categories='news') for (x, y, z) in nltk.trigrams(tagged_sent))
 	
 	ambiguous_contexts = [c for c in cfd.conditions() if len(cfd[c])>1]
 	
-	sum([cfd[c].N() for c in ambiguous_contexts])/cfd.N() # 二义性上下文大概不到5%，如果我们再从二义性上下文中挑选最可能的词性来建模，我们tagger的准确程度是十分高的
+	sum([cfd[c].N() for c in ambiguous_contexts])/cfd.N() # 上下文歧义大概不到5%，如果我们再从歧义上下文中挑选最可能的词性来建模，我们 tagger 的准确程度会更高一些，这就是 n-gram tagger 所能达到的性能上限
+
+#### confusion matrix 查看标注结果
 
 此外我们可以通过跟人工标注文本对比标注器的结果
 
-	t2 = nltk.DefaultTagger('NN')
-	test_tags = [tag for sent in brown.sents(categories='editorial') for (word, tag) in t2.tag(sent)]
-	gold_tags = [tag for (word, tag) in brown.tagged_words(categories='editorial')]
-	
-	print(nltk.ConfusionMatrix(gold_tags, test_tags)) # 利用ConfusionMatrix来比较差异
+```python
+t2 = nltk.DefaultTagger('NN')
+test_tags = [tag for sent in brown.sents(categories='editorial') for (word, tag) in t2.tag(sent)]
+gold_tags = [tag for (word, tag) in brown.tagged_words(categories='editorial')]
+
+print(nltk.ConfusionMatrix(gold_tags, test_tags)) # 利用ConfusionMatrix来比较差异
+```
+
+#### n-gram tagger 的缺陷
 
 In general, observe that the tagging process collapses distinctions: e.g. lexical identity is usually lost when all personal pronouns are tagged PRP. At the same time, the tagging process introduces new distinctions and removes ambiguities: e.g. deal tagged as VB or NN. This characteristic of collapsing certain distinctions and introducing new distinctions is an important feature of tagging which facilitates classification and prediction. When we introduce finer distinctions in a tagset, an n-gram tagger gets more detailed information about the left-context when it is deciding what tag to assign to a particular word. However, the tagger simultaneously has to do more work to classify the current token, simply because there are more tags to choose from. Conversely, with fewer distinctions (as with the simplified tagset), the tagger has less information about context, and it has a smaller range of choices in classifying the current token.
 
-通常来说tagging的过程会消除差异性distinctions，比如所有人物代词都被标注为PRP；但同时tagging过程也引入了差异性distinctions，比如同一词汇在不同上下文中被标注为不同词性。当在tagset引入更细微的区别时，n-gram tagger的上下文信息将更加丰富，同时上下文对应的tags也更多了；相反的，当使用区分弱的tagset时（例如：精简标注集），tagger上下文信息简单，备选tags变少
+通常来说 tagging 的过程会消除差异性 distinctions，比如所有人物代词都被标注为 PRP；但同时 tagging 过程也引入了差异性 distinctions，比如同一词汇在不同上下文中被标注为不同词性。当在 tagset 引入更细微的区别时，n-gram tagger 的上下文信息将更加丰富，同时上下文对应的 tags 也更多了；相反的，当使用区分弱的 tagset 时（例如：精简标注集），tagger 上下文信息简单，备选 tags 变少。
 
 We have seen that ambiguity in the training data leads to an upper limit in tagger performance. Sometimes more context will resolve the ambiguity. In other cases however, the ambiguity can only be resolved with reference to syntax, or to world knowledge. Despite these imperfections, part-of-speech tagging has played a central role in the rise of statistical approaches to natural language processing. In the early 1990s, the surprising accuracy of statistical taggers was a striking demonstration that it was possible to solve one small part of the language understanding problem, namely part-of-speech disambiguation, without reference to deeper sources of linguistic knowledge.
 
-训练数据中的二义性导致了tagger的性能上限，有些时候更加丰富的上下文信息可以解决二义性，但有时二义性需要借助语法或者别的知识来解决。词性标注尽管存在缺点，但仍然在基于统计的自然语言处理中扮演了核心的角色。
+训练数据中的词性歧义导致了 tagger 的性能上限，有些时候更加丰富的上下文信息可以解决歧义，但有时歧义需要借助语法或者别的知识来解决。词性标注尽管存在缺点，但仍然在基于统计的自然语言处理中扮演了核心的角色。
 
-### Transformation-Based Tagging 基于变换的标注
+### Transformation-Based Tagging 基于变换的标注器 Bril Tagger
 A potential issue with n-gram taggers is the size of their n-gram table (or language model). If tagging is to be employed in a variety of language technologies deployed on mobile computing devices, it is important to strike a balance between model size and tagger performance. An n-gram tagger with backoff may store trigram and bigram tables, large sparse arrays which may have hundreds of millions of entries. A second issue concerns context. The only information an n-gram tagger considers from prior context is tags, even though words themselves might be a useful source of information.
 
-n-gram tagger需要构建庞大的上下文词性表格，此外仅仅考虑了上下文词性而没有考虑单词本身，这是该tagger的显著缺点
+n-gram tagger 的两个缺点：
+
+* n-gram tagger 需要构建庞大的上下文词性表格，无法在小型计算设备上部署
+* 仅仅考虑了上下文词性而没有考虑上下文的单词本身
+
+Brill tagging, an inductive tagging method which performs very well using models that are only a tiny fraction of the size of n-gram taggers.
 
 Brill tagging is a kind of transformation-based learning, named after its inventor. The general idea is very simple: guess the tag of each word, then go back and fix the mistakes. In this way, a Brill tagger successively transforms a bad tagging of a text into a better one. As with n-gram tagging, this is a supervised learning method, since we need annotated training data to figure out whether the tagger's guess is a mistake or not. However, unlike n-gram tagging, it does not count observations but compiles a list of transformational correction rules.
 
-Brill tagging是基于转换的学习方法，该tagger先为单词估计一个tag，然后不断的去更正错误的tag，也就是说不断的文本标记更合适的tag，跟n-gram tagger同样都是监督学习算法，因为brill tagger在更正错误tag时需要参照训练数据，不过brill tagger并不需要计算庞大的上下文词性表，只需要定义一些correction rulles用以更正错误的tag
+Brill tagging 是基于转换的学习方法：该 tagger 先为每个单词估计一个 tag，然后不断的去更正错误的 tag，也就是说不断为文本标记更合适的 tag，跟 n-gram tagger 同样都是监督学习算法，因为 brill tagger 在更正错误 tag 时需要参照训练数据，不过 brill tagger 并不需要计算庞大的上下文词性表，只需要定义一些 correction rulles 用以更正错误的 tag。
 
 The process of Brill tagging is usually explained by analogy with painting. Suppose we were painting a tree, with all its details of boughs, branches, twigs and leaves, against a uniform sky-blue background. Instead of painting the tree first then trying to paint blue in the gaps, it is simpler to paint the whole canvas blue, then "correct" the tree section by over-painting the blue background. In the same fashion we might paint the trunk a uniform brown before going back to over-paint further details with even finer brushes. Brill tagging uses the same idea: begin with broad brush strokes then fix up the details, with successively finer changes
 
-可以将brill tagger的过程比作画画，先将画布背景涂满蓝色，再用棕色涂出一个树的轮廓，在继续画出树的细节
+可以将 brill tagger 的过程比作画画，先将画布背景涂满蓝色，再用棕色涂出一个树的轮廓，在继续画出树的细节。
 
 All such rules are generated from a template of the following form: "replace T1 with T2 in the context C". Typical contexts are the identity or the tag of the preceding or following word, or the appearance of a specific tag within 2-3 words of the current word. During its training phase, the tagger guesses values for T1, T2 and C, to create thousands of candidate rules. Each rule is scored according to its net benefit: the number of incorrect tags that it corrects, less the number of correct tags it incorrectly modifies.
 
-correction rule定义形式如下：replace T1 with T2 in the context C，其中上下文一般是前置或者后置词的tags。在训练过程中tagger估计T1，T2，C的值来构造候选规则，如果该规则应用在文本上使得更正错误tag的数目大于将正确tag改错的数目，则将其作为correction rule
+correction rule 定义形式如下：replace T1 with T2 in the context C，其中上下文一般是前置或者后置词的tags。在训练过程中 tagger 估计 T1，T2，C 的值来构造候选规则，如果该规则应用在文本上使得更正错误 tag 的数目大于将正确 tag 改错的数目，则将其作为 correction rule。通过训练过程，最终 bril tagger 会学习到一系列的 correction rule，以用于将来的词性标注。
 
-### The Category of a Word
+## How to Determine the Category of a Word （语言学角度）
+
 In general, linguists use morphological, syntactic, and semantic clues to determine the category of a word.
 
-语言学家通常通过形态，语法，语义等线索来确定一个词的类型
+语言学家通常通过词形态，句法，语义等线索来确定一个词的类型。
+
+### Morphological 词形态
 
 Morphological is the internal structure of a word, may give useful clues as to the word's category. For example, -ness is a suffix that combines with an adjective to produce a noun, e.g. happy → happiness, ill → illness. So if we encounter a word that ends in -ness, this is very likely to be a noun. Similarly, -ment is a suffix that combines with some verbs to produce a noun, e.g. govern → government and establish → establishment.
 
-单词的内部结构往往跟单词类别相关，比如形容词添加ness后缀构词为名词（happy->happiness），再比如动词添加后缀ment构词为名词（govern->government）
+单词的内部结构往往跟单词类别相关，比如形容词添加 -ness 后缀构词为名词（happy->happiness），再比如动词添加后缀 -ment 构词为名词（govern->government）。
+
+### Syntactic 句法
 
 
 Another source of information is the typical contexts in which a word can occur. For example, assume that we have already determined the category of nouns. Then we might say that a syntactic criterion for an adjective in English is that it can occur immediately before a noun, or immediately following the words be or very.
 
-语法规则也可以判断单词的类型，假设文本中名词已经被标注，根据语法规则形容词在名词前，并且形容词在副词和系动词后面，因此可以根据语句the near window和the end is very near确定near是形容词
+语法规则也可以判断单词的类型，假设文本中名词已经被标注，根据语法规则形容词在名词前，并且形容词在副词和系动词后面，因此可以根据语句 the near window 和 the end is very near 确定 near 是形容词。
+
+### Semantic 语义
 
 Finally, the meaning of a word is a useful clue as to its lexical category. For example, the best-known definition of a noun is semantic: "the name of a person, place or thing". Within modern linguistics, semantic criteria for word classes are treated with suspicion, mainly because they are hard to formalize. Nevertheless, semantic criteria underpin many of our intuitions about word classes, and enable us to make a good guess about the categorization of words in languages that we are unfamiliar with.
 
-语义规则因为难以被形式化而不太被现代语言学家接受，语义规则利用单词的含义来推测单词的类型，从直观上来讲该方法是容易理解的，尤其对于我们不熟悉的语言，该方法可以猜测单词的类型
+语义规则因为难以被形式化而不太被现代语言学家接受，语义规则利用单词的含义来推测单词的类型，从直观上来讲该方法是容易理解的，尤其对于我们不熟悉的语言，该方法可以猜测单词的类型。
+
+### New words 新词
 
 
 All languages acquire new lexical items. A list of words recently added to the Oxford Dictionary of English includes cyberslacker, fatoush, blamestorm, SARS, cantopop. Notice that all these new words are nouns, and this is reflected in calling nouns an open class. By contrast, prepositions are regarded as a closed class.
 
-语言的新词，最近被添加进牛津词典的单词都是名词，名词被称作开放类别，相应的介词被称作关闭类别，因为介词的数量以及用法变化是平缓的
-
-### Morphology in Part of Speech Tagsets 含有句法信息的标注集
-
-Common tagsets often capture some morpho-syntactic information; that is, information about the kind of morphological markings that words receive by virtue of their syntactic role. 
-
-在标注单词时如果可以标注出单词在语句中的用法将会很有用，比如单词go有gone，goes，went等形式，显然应该予以区分，还有系动词会被标注为：be/BE, being/BEG, am/BEM, are/BER, is/BEZ, been/BEN, were/BED and was/BEDZ。这样的标注有利用对文本进行morphological analysis
-
-
+语言的新词，最近被添加进牛津词典的单词都是名词，名词被称作开放类别，相应的介词被称作关闭类别，因为介词的数量以及用法变化是平缓的。
 
 # Chapter 6: Learning to Classify Text
 
 Detecting patterns is a central part of Natural Language Processing. Words ending in -ed tend to be past tense verbs. Frequent use of will is indicative of news text. These observable patterns — word structure and word frequency — happen to correlate with particular aspects of meaning, such as tense and topic. But how did we know where to start looking, which aspects of form to associate with which aspects of meaning?
 
-模式识别是自然语言处理的一个核心问题。以ed结尾的单词往往表示过去式，文本中出现will较多则可能是新闻稿，像这样的文本特征往往表示的特定的意义，如何选取文本特定呢，什么样的特征可以用来对文本分类呢？
+模式识别是自然语言处理的一个核心问题。以 -ed 结尾的单词往往表示过去式，文本中出现 will 较多则可能是新闻稿，像这样的文本特征往往表示的特定的意义，如何选取文本特征呢，什么样的特征可以用来对文本分类呢？
 
-### Supervised Classification
+## Supervised Classification
+
+### Classification Task
+
 Classification is the task of choosing the correct class label for a given input. In basic classification tasks, each input is considered in isolation from all other inputs, and the set of labels is defined in advance. The basic classification task has a number of interesting variants. For example, in multi-class classification, each instance may be assigned multiple labels; in open-class classification, the set of labels is not defined in advance; and in sequence classification, a list of inputs are jointly classified.
 
-分类器的任务是为输入指定一个标签。在基本的分类问题中，每个输入被认为是独立的，且标签集是预先定义好的。基本分类问题有若干变体，例如multi-class classification 为每个输入指定多个标签；open-class classification 标签集并非事先定义的；sequence classification 一系列输入被联合分类
+分类任务是为输入指定一个标签。在基本的分类问题中，每个输入被认为是独立的，且标签集是预先定义好的。基本分类问题有若干变体：如 **multi-class classification** 为每个输入指定多个标签；**open-class classification** 标签集并非事先定义的；**sequence classification** 则是为一系列输入被一并给予分类标签。
+
+### Supervised Learning
 
 Supervised Classification. During training, a feature extractor is used to convert each input value to a feature set. These feature sets, which capture the basic information about each input that should be used to classify it, are discussed in the next section. Pairs of feature sets and labels are fed into the machine learning algorithm to generate a model. During prediction, the same feature extractor is used to convert unseen inputs to feature sets. These feature sets are then fed into the model, which generates predicted labels.
 
-监督分类器工作过程：在training时，给定(input, label)数据，使用一个feature extractor从input中提取feature-set，将(feature-set, label)提供给机器学习算法来生成一个model。在prediction时，使用相同的feature extractor提取特征，并将(input, feature-set)传入之前训练出来的model来预测label
+监督分类器工作过程：在 training 时，给定 (input, label) 数据，使用一个 feature extractor 从 input 中提取feature-set，将 (feature-set, label) 提供给机器学习算法来生成一个 model。在 prediction 时，使用相同的 feature extractor 提取特征，并将 (input, feature-set) 传入之前训练出来的model来预测 label。
+
+![](supervised-classification.png)
+
+## 一些分类任务
+
+### Gender Identification 性别识别
 
 The first step in creating a classifier is deciding what features of the input are relevant, and how to encode those features. 
 
-构造分类器的第一步是特征选取，选取什么特征以及如何对特征编码，这些有特征提取器来完成，特征提取的基本功能是，给定输入返回特征集，下面构造一个根据名字最后一个字母进行性别分类的分类器
+构造分类器的第一步是特征选取，选取什么特征以及如何对特征编码，这些由特征提取器来完成，特征提取的基本功能是，给定输入返回特征集，下面构造一个根据名字最后一个字母（最后一个字母是名字的特征）进行性别分类的分类器：
 
-	import random
-	import nltk
-	from nltk.corpus import names
-	
-	# 定义feature extactor
-	def gender_features(name):
-		return {'last_letter': name[-1:]} # return feature set
-	
-	# 构造(input, label)数据
-	labeled_names = [(name, 'male') for name in names.words('male.txt')] + [(name, 'female') for name in names.words('female.txt')]
-	random.shuffle(labeled_names)
-	
-	# 构造(feature-set, label)，并将数据划分为training和testing集
-	featuresets = [(gender_features(name), label) for (name, label) in labeled_names]
-	train_set, test_set = featuresets[500:], featuresets[:500]
-	
-	# 构造训练集和测试集时节省内存的方法
-	from nltk.classify import apply_features
-	train_set = apply_features(gender_features, labeled_names[500:])
-	test_set = apply_features(gender_features, labeled_names[:500])
-	
-	# 训练分类器
-	classifier = nltk.NaiveBayesClassifier.train(train_set)
-	
-	# 对名字分类，注这里使用了训练时的特征提取器
-	classifier.classify(gender_features('Neo'))
-	classifier.classify(gender_features('Trinity'))
-	
-	# 使用测试数据对分类器评分
-	nltk.classify.accuracy(classifier, test_set)
-	
-	# 查看前5个特征在分类时的贡献
-	classifier.show_most_informative_features(5)
+```python
+import random
+import nltk
+from nltk.corpus import names
 
-### Choosing Features
+# 定义feature extactor
+def gender_features(name):
+	return {'last_letter': name[-1:]} # return feature set
 
-Selecting relevant features and deciding how to encode them for a learning method can have an enormous impact on the learning method's ability to extract a good model. Much of the interesting work in building a classifier is deciding what features might be relevant, and how we can represent them. Although it's often possible to get decent performance by using a fairly simple and obvious set of features, there are usually significant gains to be had by using carefully constructed features based on a thorough understanding of the task at hand. Typically, feature extractors are built through a process of trial-and-error, guided by intuitions about what information is relevant to the problem. It's common to start with a "kitchen sink" approach, including all the features that you can think of, and then checking to see which features actually are helpful
+# 构造(input, label)数据
+labeled_names = [(name, 'male') for name in names.words('male.txt')] + [(name, 'female') for name in names.words('female.txt')]
+random.shuffle(labeled_names)
 
-选取怎样的特征以及如何对特征编码对于学习算法的能力有至关重要的影响，因此构造分类器的过程中特征选取和特征表示是十分重要的，而特征的构建是基于对当前任务的透彻理解。特征提取器的构建过程是不断试错的过程，一开始有一个直观的方案，后续不断去改进它，比较常见的方案是，一开始考虑尽可能多的特征，然后去观察哪些特征对分类是有帮助的，然后在不断去改进它，下面是升级版的名字特征提取器
+# 构造(feature-set, label)，并将数据划分为training和testing集
+featuresets = [(gender_features(name), label) for (name, label) in labeled_names]
+train_set, test_set = featuresets[500:], featuresets[:500]
+
+# 构造训练集和测试集时节省内存的方法
+from nltk.classify import apply_features
+train_set = apply_features(gender_features, labeled_names[500:])
+test_set = apply_features(gender_features, labeled_names[:500])
+
+# 训练分类器
+classifier = nltk.NaiveBayesClassifier.train(train_set)
+
+# 对名字分类，注这里使用了训练时的特征提取器
+classifier.classify(gender_features('Neo'))
+classifier.classify(gender_features('Trinity'))
+
+# 使用测试数据对分类器评分
+nltk.classify.accuracy(classifier, test_set)
+
+# 查看前5个特征在分类时的贡献
+classifier.show_most_informative_features(5)
+```
+
+#### Choosing Features and Dateset Divide 特征选择和数据集划分
+
+Selecting relevant features and deciding how to encode them for a learning method can have an enormous impact on the learning method's ability to extract a good model. Much of the interesting work in building a classifier is deciding what features might be relevant, and how we can represent them. Although it's often possible to get decent performance by using a fairly simple and obvious set of features, there are usually significant gains to be had by using carefully constructed features based on a thorough understanding of the task at hand. Typically, feature extractors are built through a process of **trial-and-error**, guided by intuitions about what information is relevant to the problem. It's common to start with a "**kitchen sink**" approach, including all the features that you can think of, and then checking to see which features actually are helpful.
+
+选取怎样的特征以及如何对特征编码对于学习算法的能力有至关重要的影响，因此构造分类器的过程中特征选取和特征表示是十分重要的，而特征的构建是基于对当前任务的透彻理解。特征提取器的构建过程是不断试错的过程，一开始有一个直观的方案，然后利用领域知识不断去改进它，比较常见的方案是，一开始考虑尽可能多的特征，然后去观察哪些特征对分类是有帮助的，然后在不断去改进它，下面是升级版的名字特征提取器：
 
 	def gender_features2(name):
 	    features = {}
@@ -1566,13 +1618,13 @@ Selecting relevant features and deciding how to encode them for a learning metho
 	        features["has({})".format(letter)] = (letter in name.lower())
 	    return features
 
-However, there are usually limits to the number of features that you should use with a given learning algorithm — if you provide too many features, then the algorithm will have a higher chance of relying on idiosyncrasies of your training data that don't generalize well to new examples. This problem is known as overfitting, and can be especially problematic when working with small training sets.
+However, there are usually limits to the number of features that you should use with a given learning algorithm — if you provide too many features, then the algorithm will have a higher chance of relying on idiosyncrasies of your training data that don't generalize well to new examples. This problem is known as **overfitting**, and can be especially problematic when working with small training sets.
 
-特征数量如果太多，会出现过拟合情况，当特征太多时，学习算法产生的模型将更多的依赖于给定的测试数据集，不能很好的一般化到新数据集上，这个问题在小训练集上尤为明显，像上面改进过后的名字特征提取器，最终预测准确度其实是变低了
+特征数量如果太多，会出现过拟合情况，当特征太多时，学习算法产生的模型将更多的依赖于给定的测试数据集，不能很好的一般化到新数据集上，这个问题在小训练集上尤为明显，像上面改进过后的名字特征提取器，最终预测准确度其实是变低了。
 
-Once an initial set of features has been chosen, a very productive method for refining the feature set is error analysis. First, we select a development set, containing the corpus data for creating the model. This development set is then subdivided into the training set and the dev-test set.
+Once an initial set of features has been chosen, a very productive method for refining the feature set is **error analysis**. First, we select a development set, containing the corpus data for creating the model. This **development set** is then subdivided into the **training set** and the **dev-test set**.
 
-错误分析来细化特征集，特征选取是一个trial and error的过程，所以应该将数据集化为development set和test set，再讲development set划分为training set和dev-test set，这样在开发时，使用training set训练分类器，然后用dev-test测试分类器，并根据测试结果改进分类器，而test set则作为最终评估分类器性能的数据集
+错误分析来细化特征集，特征选取是一个 trial and error 的过程，所以应该将数据集化为 development set 和test set，再将 development set 划分为 training set 和 dev-test set，这样在开发时，使用 training set 训练分类器，然后用 dev-test 测试分类器，并根据测试结果改进分类器（如：进行特征选择），而 test set 则作为最终评估分类器性能的数据集：
 
 	# 将数据集分为训练集，开发测试集，发布测试集
 	train_names = labeled_names[1500:]
@@ -1603,10 +1655,10 @@ Once an initial set of features has been chosen, a very productive method for re
 
 this error analysis procedure can then be repeated, checking for patterns in the errors that are made by the newly improved classifier. Each time the error analysis procedure is repeated, we should select a different dev-test/training split, to ensure that the classifier does not start to reflect idiosyncrasies in the dev-test set. But once we've used the dev-test set to help us develop the model, we can no longer trust that it will give us an accurate idea of how well the model would perform on new data. It is therefore important to keep the test set separate, and unused, until our model development is complete. At that point, we can use the test set to evaluate how well our model will perform on new input values.
 
-重复该错误分析过程，检查改进后分类器的错误模式。每次错误分析时，我们应该选择不同的开发测试/训练分割集，以确保分类器不会固定依赖一个devtest集的特性。一旦我们使用开发/测试集来帮助我们开发模型，我们就不能再相信它会给我们一个准确的对模型的评估。模型评估应该使用未参与训练以及测试的新数据集，因此将一部分数据作为test set，用来最终对模型评估是重要的。
+重复该错误分析过程，检查改进后分类器的错误模式。每次错误分析时，我们应该选择不同的开发测试/训练分割集，以确保分类器不会固定依赖一个 devtest 集的特性。一旦我们使用开发/测试集来帮助我们开发模型，我们就不能再相信它会给我们一个准确的对模型的评估。模型评估应该使用未参与训练以及测试的新数据集，因此将一部分数据作为 test set，用来最终对模型评估是重要的。
 
-### Document Classification By Classifier
-NLTK自带的语料库中含有文档分类信息，利用这些信息可以构建文档分类器
+### Document Classification 文档分类
+NLTK 自带的语料库中含有文档分类信息，利用这些信息可以构建文档分类器
 
 	import random
 	from nltk.corpus import movie_reviews
