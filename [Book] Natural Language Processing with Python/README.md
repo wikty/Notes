@@ -1559,7 +1559,7 @@ Supervised Classification. During training, a feature extractor is used to conve
 
 ![](supervised-classification.png)
 
-## 一些分类任务
+## Some Classification Tasks in NLP
 
 ### Gender Identification 性别识别
 
@@ -1622,7 +1622,7 @@ However, there are usually limits to the number of features that you should use 
 
 特征数量如果太多，会出现过拟合情况，当特征太多时，学习算法产生的模型将更多的依赖于给定的测试数据集，不能很好的一般化到新数据集上，这个问题在小训练集上尤为明显，像上面改进过后的名字特征提取器，最终预测准确度其实是变低了。
 
-Once an initial set of features has been chosen, a very productive method for refining the feature set is **error analysis**. First, we select a development set, containing the corpus data for creating the model. This **development set** is then subdivided into the **training set** and the **dev-test set**.
+Once an initial set of features has been chosen, a very productive method for refining the feature set is **error analysis**. First, we select a development set, containing the corpus data for creating the model. This **development set** is then subdivided into the **training set** and the **dev-test set**. The training set is used to train the model, and the dev-test set is used to perform error analysis. The test set serves in our final evaluation of the system.
 
 错误分析来细化特征集，特征选取是一个 trial and error 的过程，所以应该将数据集化为 development set 和test set，再将 development set 划分为 training set 和 dev-test set，这样在开发时，使用 training set 训练分类器，然后用 dev-test 测试分类器，并根据测试结果改进分类器（如：进行特征选择），而 test set 则作为最终评估分类器性能的数据集：
 
@@ -1653,11 +1653,13 @@ Once an initial set of features has been chosen, a very productive method for re
 			'suffix1': word[-1:], 'suffix2': word[-2:]
 		}	
 
+![](corpus-training-dev-test.png)
+
 this error analysis procedure can then be repeated, checking for patterns in the errors that are made by the newly improved classifier. Each time the error analysis procedure is repeated, we should select a different dev-test/training split, to ensure that the classifier does not start to reflect idiosyncrasies in the dev-test set. But once we've used the dev-test set to help us develop the model, we can no longer trust that it will give us an accurate idea of how well the model would perform on new data. It is therefore important to keep the test set separate, and unused, until our model development is complete. At that point, we can use the test set to evaluate how well our model will perform on new input values.
 
 重复该错误分析过程，检查改进后分类器的错误模式。每次错误分析时，我们应该选择不同的开发测试/训练分割集，以确保分类器不会固定依赖一个 devtest 集的特性。一旦我们使用开发/测试集来帮助我们开发模型，我们就不能再相信它会给我们一个准确的对模型的评估。模型评估应该使用未参与训练以及测试的新数据集，因此将一部分数据作为 test set，用来最终对模型评估是重要的。
 
-### Document Classification 文档分类
+### Document Classification 文档情感分类
 NLTK 自带的语料库中含有文档分类信息，利用这些信息可以构建文档分类器
 
 	import random
@@ -1665,7 +1667,6 @@ NLTK 自带的语料库中含有文档分类信息，利用这些信息可以构
 	
 	# feature extractor
 	# 以文档中是否含有文本集中高频的2000单词作为特征集
-	
 	word_features = list(nltk.FreqDist(w.lower() for w in movie_reviews.words()))[:2000] # 2000 most frequent words as feature-words
 	
 	def document_features(document):
@@ -1688,242 +1689,313 @@ NLTK 自带的语料库中含有文档分类信息，利用这些信息可以构
 	nltk.classify.accuracy(classifier, test_set)
 	classifier.show_most_informative_features(5)
 
-### Part-Of-Speech Tagging By Classifier
-我们可以基于正则表达式来根据单词内部不同结构对其进行词性标注，但是寻找单词内部结构往往是人工的。其实我们可以用分类方法来解决词性标注问题，下面根据单词后缀为提取单词特征进行词性分类
-
-	import nltk
-	from nltk.corpus import brown
+### Part-Of-Speech 词性标注
+我们可以基于正则表达式来根据单词内部不同结构对其进行词性标注，但是寻找单词内部结构往往是人工的。其实我们可以用分类方法来解决词性标注问题，下面根据单词后缀为提取单词特征进行词性分类，进而我们可以知道哪些后缀可能会作为词性特征：
 
 
-	# build feature extractor
-	fd = nltk.FreqDist()
-	for word in brown.words():
-		word = word.lower()
-		fd[word[-1:]] += 1
-		fd[word[-2:]] += 1
-		fd[word[-3:]] += 1
-	common_suffixes = [suffix for (suffix, count) in fd.most_common(100)]
-	
-	def pos_features(word):
-		features = {}
-		for suffix in common_suffixes:
-			features['endswith({})'.format(suffix)] = word.lower().endswith(suffix)
-	
-	# build (featureset, label) and split into train/test set
-	featuresets = [(pos_features(n), g) for (n,g) in brown.tagged_words(categories='news')]
-	size = int(len(featuresets) * 0.1)
-	train_set, test_set = featuresets[size:], featuresets[:size]
-	
-	# build DecisionTreeClassifier
-	classifier = nltk.DecisionTreeClassifier.train(train_set)
-	classifier.classify(pos_features('cats'))
-	nltk.classify.accuracy(classifier, test_set)
+```python
+import nltk
+from nltk.corpus import brown
+
+# build feature extractor
+fd = nltk.FreqDist()
+for word in brown.words():
+	word = word.lower()
+	fd[word[-1:]] += 1
+	fd[word[-2:]] += 1
+	fd[word[-3:]] += 1
+common_suffixes = [suffix for (suffix, count) in fd.most_common(100)]
+
+def pos_features(word):
+	features = {}
+	for suffix in common_suffixes:
+		features['endswith({})'.format(suffix)] = word.lower().endswith(suffix)
+
+# build (featureset, label) and split into train/test set
+featuresets = [(pos_features(n), g) for (n,g) in brown.tagged_words(categories='news')]
+size = int(len(featuresets) * 0.1)
+train_set, test_set = featuresets[size:], featuresets[:size]
+
+# build DecisionTreeClassifier
+classifier = nltk.DecisionTreeClassifier.train(train_set)
+classifier.classify(pos_features('cats'))
+nltk.classify.accuracy(classifier, test_set)
+
+print(classifier.classify(pos_features('cats')))
+```
+
+上面训练的分类器是决策树，决策树解释性很好，我们可以将其打印为伪代码形式：
+
+```
+print(classifier.pseudocode(depth=4))
+```
 
 By augmenting the feature extraction function, we could modify this part-of-speech tagger to leverage a variety of other word-internal features, such as the length of the word, the number of syllables it contains, or its prefix. However, as long as the feature extractor just looks at the target word, we have no way to add features that depend on the context that the word appears in. But contextual features often provide powerful clues about the correct tag — for example, when tagging the word "fly," knowing that the previous word is "a" will allow us to determine that it is functioning as a noun, not a verb. In order to accommodate features that depend on a word's context, we must revise the pattern that we used to define our feature extractor. Instead of just passing in the word to be tagged, we will pass in a complete (untagged) sentence, along with the index of the target word.
 
-根据单词内部结构，我们可以继续优化单词的特征提取器，比如可以将单词长度，音节长度，前缀等作为特征。但是我们的特征提取器只关注单词内部结构，却忽略了单词的上下文，其实上下文提供了很多信息，比如如果单词fly出现在单词a后面，显然单词fly是名词。为了考虑上下文，将上面词性特征提取重写如下
+根据单词内部结构，我们可以继续优化单词的特征提取器，比如可以将单词长度，音节长度，前缀等作为特征。但是我们的特征提取器只关注单词内部结构，却忽略了单词的上下文，其实上下文提供了很多信息，比如如果单词fly 出现在单词 a 后面，显然单词 fly 是名词。为了考虑上下文，将上面词性特征提取重写如下：
 
-	def pos_features(sentence, i): [1]
-	    features = {"suffix(1)": sentence[i][-1:],
-	                "suffix(2)": sentence[i][-2:],
-	                "suffix(3)": sentence[i][-3:]}
-	    if i == 0:
-	        features["prev-word"] = "<START>"
-	    else:
-	        features["prev-word"] = sentence[i-1]
-	    return features
+```python
+def pos_features(sentence, i): [1]
+    # 单词后缀特征
+    features = {"suffix(1)": sentence[i][-1:],
+                "suffix(2)": sentence[i][-2:],
+                "suffix(3)": sentence[i][-3:]}
+    # 单词上下文特征
+    if i == 0:
+        features["prev-word"] = "<START>"
+    else:
+        features["prev-word"] = sentence[i-1]
+    return features
 
+tagged_sents = brown.tagget_sents(categories='news')
+featuresets = []
 
-	tagged_sents = brown.tagget_sents(categories='news')
-	featuresets = []
-	
-	for tagged_sent in tagged_sents:
-		untagged_sent = nltk.tag.untag(tagged_sent)
-		for i, (word, tag) in enumerate(tagged_sent):
-			featuresets.append((pos_features(untagged_sent, i), tag))
-	
-	size = int(len(featuresets) * 0.1)
-	train_set, test_set = featuresets[size:], featuresets[:size]
-	classifier = nltk.NaiveBayesClassifier.train(train_set)
-	nltk.classify.accuracy(classifier, test_set)
+for tagged_sent in tagged_sents:
+	untagged_sent = nltk.tag.untag(tagged_sent)
+	for i, (word, tag) in enumerate(tagged_sent):
+		featuresets.append((pos_features(untagged_sent, i), tag))
 
- However, it is unable to learn the generalization that a word is probably a noun if it follows an adjective, because it doesn't have access to the previous word's part-of-speech tag. In general, simple classifiers always treat each input as independent from all other inputs. In many contexts, this makes perfect sense. For example, decisions about whether names tend to be male or female can be made on a case-by-case basis. However, there are often cases, such as part-of-speech tagging, where we are interested in solving classification problems that are closely related to one another.
+size = int(len(featuresets) * 0.1)
+train_set, test_set = featuresets[size:], featuresets[:size]
+classifier = nltk.NaiveBayesClassifier.train(train_set)
+nltk.classify.accuracy(classifier, test_set)
+```
 
-前面的方案虽然将单词上下文作为词性特征解决了部分问题，更为棘手的问题是，在一段文本中单词的词性是相关的，比如形容词后是名词，也就是说input之间是彼此关联的，某个input的分类结果会影响到别的input的分类结果，下面我们介绍针对这种情况的解决方案
+### Sequence Classification of POS 基于序列的词性标注
 
-In order to capture the dependencies between related classification tasks, we can use joint classifier models, which choose an appropriate labeling for a collection of related inputs. In the case of part-of-speech tagging, a variety of different sequence classifier models can be used to jointly choose part-of-speech tags for all the words in a given sentence. One sequence classification strategy, known as consecutive classification or greedy sequence classification, is to find the most likely class label for the first input, then to use that answer to help find the best label for the next input. The process can then be repeated until all of the inputs have been labeled. 
+However, it is unable to learn the generalization that a word is probably a noun if it follows an adjective, because it doesn't have access to the previous word's part-of-speech tag. In general, simple classifiers always treat each input as independent from all other inputs. In many contexts, this makes perfect sense. For example, decisions about whether names tend to be male or female can be made on a case-by-case basis. However, there are often cases, such as part-of-speech tagging, where we are interested in solving classification problems that are closely related to one another.
 
-各个input之间是关联依赖的，因此要使用joint classifier来处理，为某些相关联的input集合计算lable，而不是单独为某个input计算label，在上面的词性标注例子中，即使用sequence classifier来为整个句子标注词性。一个常见的sequence classifier策略是greedy sequence classification，即为第一个单词标注好词性后，然后使用第一个单词的词性来对第二个单词标注，然后使用前两个单词标注好的词性来标注第三个单词，以此类推直到标注完整个句子
+前面的方案虽然将单词上下文作为词性特征解决了部分问题，更为棘手的问题是，在一段文本中单词的词性是相关的，比如形容词后是名词，也就是说 input 之间是彼此关联的，某个 input 的分类结果会影响到别的 input 的分类结果，下面我们介绍针对这种情况的解决方案
 
-	# feature extractor使用了列表history来记录单词sentence[i]之前所有单词的词性，对sentence[i]标注词性时，会参考前一个单词的词性history[i]（至于想要参考前面几个单词的词性取决于设计，另外虽然不能将后续单词词性作为特征，但可以将后续单词作为特征）
-	def pos_features(sentence, i, history):
-	     features = {"suffix(1)": sentence[i][-1:],
-	                 "suffix(2)": sentence[i][-2:],
-	                 "suffix(3)": sentence[i][-3:]}
-	     if i == 0:
-	         features["prev-word"] = "<START>"
-	         features["prev-tag"] = "<START>"
-	     else:
-	         features["prev-word"] = sentence[i-1]
-	         features["prev-tag"] = history[i-1]
-	     return features
-	
-	class ConsecutivePosTagger(nltk.TaggerI):
-	
-	    def __init__(self, train_sents):
-	        train_set = []
-	        for tagged_sent in train_sents:
-	            untagged_sent = nltk.tag.untag(tagged_sent)
-	            history = []
-	            for i, (word, tag) in enumerate(tagged_sent):
-	                featureset = pos_features(untagged_sent, i, history)
-	                train_set.append( (featureset, tag) )
-	                history.append(tag)
-	        self.classifier = nltk.NaiveBayesClassifier.train(train_set)
-	
-	    def tag(self, sentence):
-			# 不仅仅训练时要使用feature extractor，对文本分类时也要使用feature extractor将input转换为featureset
-	        history = []
-	        for i, word in enumerate(sentence):
-	            featureset = pos_features(sentence, i, history)
-	            tag = self.classifier.classify(featureset)
-	            history.append(tag)
-	        return zip(sentence, history)
-	
-	tagged_sents = brown.tagged_sents(categories='news')
-	size = int(len(tagged_sents) * 0.1)
-	train_sents, test_sents = tagged_sents[size:], tagged_sents[:size]
-	tagger = ConsecutivePosTagger(train_sents)
-	print(tagger.evaluate(test_sents))
+In order to capture the dependencies between related classification tasks, we can use **joint classifier** models, which choose an appropriate labeling for a collection of related inputs. In the case of part-of-speech tagging, a variety of different **sequence classifier** models can be used to jointly choose part-of-speech tags for all the words in a given sentence. 
 
-One shortcoming of this approach is that we commit to every decision that we make. One solution to this problem is to adopt a transformational strategy instead. Transformational joint classifiers work by creating an initial assignment of labels for the inputs, and then iteratively refining that assignment in an attempt to repair inconsistencies between related inputs. Another solution is to assign scores to all of the possible sequences of part-of-speech tags, and to choose the sequence whose overall score is highest. This is the approach taken by Hidden Markov Models. Hidden Markov Models are similar to consecutive classifiers in that they look at both the inputs and the history of predicted tags. However, rather than simply finding the single best tag for a given word, they generate a probability distribution over tags. These probabilities are then combined to calculate probability scores for tag sequences, and the tag sequence with the highest probability is chosen. Unfortunately, the number of possible tag sequences is quite large. Given a tag set with 30 tags, there are about 600 trillion (30^10) ways to label a 10-word sentence. In order to avoid considering all these possible sequences separately, Hidden Markov Models require that the feature extractor only look at the most recent tag (or the most recent n tags, where n is fairly small). Given that restriction, it is possible to use dynamic programming to efficiently find the most likely tag sequence. In particular, for each consecutive word index i, a score is computed for each possible current and previous tag. This same basic approach is taken by two more advanced models, called Maximum Entropy Markov Models and Linear-Chain Conditional Random Field Models; but different algorithms are used to find scores for tag sequences.
+各个 input 之间是关联依赖的，因此要使用 joint classifier 来处理，为某些相关联的 input 集合计算 lable，而不是单独为某个 input 计算 label，在上面的词性标注例子中，即使用 sequence classifier 来为整个句子标注词性。
 
-上述方案依然存在问题，单词标注词性不依赖于后续标注的结果，即不能根据后续标注的结果对之前的标注进行修正。可以采用类似于Brill Tagger的transformational策略，或者使用采用隐含马尔科夫链模型。HMM类似于sequence classifier都会考虑inputs和之前预测的tags，不同之处在于，HMM并不是简单的为某个单词计算一个tag，而是为tags生成概率分布，然后对tag sequences进行概率估算，然后选取评分最高的那个tag sequence。不过由于tag sequence数量庞大，例如给定tag set为30大小，句子长度为10个单词，在tag sequence数量等于30的10次方，HMM基于了一个假设当前单词的tag只受到最近若干个单词的影响，这样可以显著降低tag sequence的数量规模，结合动态规划可以容易的找出可能性最大的tag sequence，在实践中通常使用Maximum Entropy Markov Model和Linear-Chain Conditional Random Field Models
+若干序列分类器都可以应用于词性标注问题，下面将分别介绍：
 
-### Sentence Segmentation
+* consecutive classifier
+* transformational joint classifier
+* HMM
+* MEMM
+
+One sequence classification strategy, known as **consecutive classification** or **greedy sequence classification**, is to find the most likely class label for the first input, then to use that answer to help find the best label for the next input. The process can then be repeated until all of the inputs have been labeled. 
+
+一个常见的 sequence classifier 策略是：greedy sequence classification，即为第一个单词标注好词性后，然后使用第一个单词的词性来对第二个单词标注，然后使用前两个单词标注好的词性来标注第三个单词，以此类推直到标注完整个句子
+
+```python
+# feature extractor使用了列表history来记录单词sentence[i]之前所有单词的词性，对sentence[i]标注词性时，会参考前一个单词的词性history[i]（至于想要参考前面几个单词的词性取决于设计，另外虽然不能将后续单词词性作为特征，但可以将后续单词作为特征）
+def pos_features(sentence, i, history):
+     features = {"suffix(1)": sentence[i][-1:],
+                 "suffix(2)": sentence[i][-2:],
+                 "suffix(3)": sentence[i][-3:]}
+     if i == 0:
+         features["prev-word"] = "<START>"
+         features["prev-tag"] = "<START>"
+     else:
+         features["prev-word"] = sentence[i-1]
+         features["prev-tag"] = history[i-1]
+     return features
+
+class ConsecutivePosTagger(nltk.TaggerI):
+
+    def __init__(self, train_sents):
+        train_set = []
+        for tagged_sent in train_sents:
+            untagged_sent = nltk.tag.untag(tagged_sent)
+            history = []
+            for i, (word, tag) in enumerate(tagged_sent):
+                featureset = pos_features(untagged_sent, i, history)
+                train_set.append( (featureset, tag) )
+                history.append(tag)
+        self.classifier = nltk.NaiveBayesClassifier.train(train_set)
+
+    def tag(self, sentence):
+		# 不仅仅训练时要使用feature extractor，对文本分类时也要使用feature extractor将input转换为featureset
+        history = []
+        for i, word in enumerate(sentence):
+            featureset = pos_features(sentence, i, history)
+            tag = self.classifier.classify(featureset)
+            history.append(tag)
+        return zip(sentence, history)
+
+tagged_sents = brown.tagged_sents(categories='news')
+size = int(len(tagged_sents) * 0.1)
+train_sents, test_sents = tagged_sents[size:], tagged_sents[:size]
+tagger = ConsecutivePosTagger(train_sents)
+print(tagger.evaluate(test_sents))
+```
+
+One shortcoming of this approach is that we commit to every decision that we make. One solution to this problem is to adopt a transformational strategy instead. **Transformational joint classifiers** work by creating an initial assignment of labels for the inputs, and then iteratively refining that assignment in an attempt to repair inconsistencies between related inputs. Another solution is to assign scores to all of the possible sequences of part-of-speech tags, and to choose the sequence whose overall score is highest. This is the approach taken by **Hidden Markov Models**. Hidden Markov Models are similar to consecutive classifiers in that they look at both the inputs and the history of predicted tags. However, rather than simply finding the single best tag for a given word, they generate a probability distribution over tags. These probabilities are then combined to calculate probability scores for tag sequences, and the tag sequence with the highest probability is chosen. Unfortunately, the number of possible tag sequences is quite large. Given a tag set with 30 tags, there are about 600 trillion (30^10) ways to label a 10-word sentence. In order to avoid considering all these possible sequences separately, Hidden Markov Models require that the feature extractor only look at the most recent tag (or the most recent n tags, where n is fairly small). Given that restriction, it is possible to use **dynamic programming** to efficiently find the most likely tag sequence. In particular, for each consecutive word index i, a score is computed for each possible current and previous tag. This same basic approach is taken by two more advanced models, called **Maximum Entropy Markov Models** and **Linear-Chain Conditional Random Field Models**; but different algorithms are used to find scores for tag sequences.
+
+上述方案依然存在问题，单词标注词性不依赖于后续标注的结果，即不能根据后续标注的结果对之前的标注进行修正。可以采用类似于Brill Tagger的transformational策略，或者使用采用隐含马尔科夫链模型。HMM类似于sequence classifier都会考虑inputs和之前预测的tags，不同之处在于，HMM并不是简单的为某个单词计算一个tag，而是为tags生成概率分布，然后对tag sequences进行概率估算，然后选取评分最高的那个tag sequence。不过由于tag sequence数量庞大，例如给定tag set为30大小，句子长度为10个单词，在tag sequence数量等于30的10次方，HMM基于了一个假设当前单词的tag只受到最近若干个单词的影响，这样可以显著降低tag sequence的数量规模，结合动态规划可以容易的找出可能性最大的tag sequence，在实践中通常使用 Maximum Entropy Markov Model和Linear-Chain Conditional Random Field Models
+
+### Sentence Segmentation 句子分割
 Sentence segmentation can be viewed as a classification task for punctuation: whenever we encounter a symbol that could possibly end a sentence, such as a period or a question mark, we have to decide whether it terminates the preceding sentence.
 
-分句问题可以看成标点分类问题，即判断某个标点是否代表了当前句子的结束
+分句问题可以看成标点分类问题，即判断某个标点是否代表了当前句子的结束：
 
-	# corpus data
-	sents = nltk.corpus.treebank_raw.sents()
-	tokens = []
-	boundaries = []
-	offset = 0
-	for sent in sents:
-	    tokens.extend(sent)
-	    offset += len(sent)
-		# store sentence boundary index
-	    boundaries.append(offset-1)
-	
-	# feature extractor, how to description sentence's puncation
-	def punct_features(tokens, i):
-	    return {
-	        'next-word-capitalized': tokens[i+1][0].isupper(),
-	        'prev-word': tokens[i-1].lower(),
-	        'punct': tokens[i],
-	        'prev-word-is-one-char': len(tokens[i-1]) == 1
-	    }
-	
-	# build featuresets and split into train set and test set
-	featuresets = [(punct_features(tokens, i), (i in boundaries)) for i in range(1, len(tokens)-1) if tokens[i] in '.?!']
-	size = int(len(featuresets) * 0.1)
-	train_set, test_set = featuresets[size:], featuresets[:size]
-	
-	classifier = nltk.NaiveBayesClassifier.train(train_set)
-	nltk.classify.accuracy(classifier, test_set)
-	
-	# sentence segmentation using the above classifier
-	def segment_sentences(words):
-	    start = 0
-	    sents = []
-	    for i, word in enumerate(words):
-	        if word in '.?!' and classifier.classify(punct_features(words, i)) == True:
-	            sents.append(words[start:i+1])
-	            start = i+1
-	    if start < len(words):
-	        sents.append(words[start:])
-	    return sents
+```python
+# corpus data
+sents = nltk.corpus.treebank_raw.sents()
+tokens = []
+boundaries = []
+offset = 0
+for sent in sents:
+    tokens.extend(sent)
+    offset += len(sent)
+	# store sentence boundary index
+    boundaries.append(offset-1)
 
-### Identifying Dialogue Act Types
+# feature extractor, how to description sentence's puncation
+def punct_features(tokens, i):
+    return {
+        'next-word-capitalized': tokens[i+1][0].isupper(),
+        'prev-word': tokens[i-1].lower(),
+        'punct': tokens[i],
+        'prev-word-is-one-char': len(tokens[i-1]) == 1
+    }
 
-对话工作类型指的是一段文本是表示提问的，回答的，疑问的，欢迎的，声明的等等，在NLTK语料库提供了关于对话动作类型的分类
+# build featuresets and split into train set and test set
+featuresets = [(punct_features(tokens, i), (i in boundaries)) for i in range(1, len(tokens)-1) if tokens[i] in '.?!']
+size = int(len(featuresets) * 0.1)
+train_set, test_set = featuresets[size:], featuresets[:size]
 
-	# get the xml version of post
-	posts = nltk.corpus.nps_chat.xml_posts()[:10000]
-	
-	# feature extractor
-	# 这里假设对话动作类型取决于对话中的单词
-	def dialogue_act_features(post):
-	    features = {}
-	    for word in nltk.word_tokenize(post):
-	        features['contains({})'.format(word.lower())] = True
-	    return features
-	
-	featuresets = [(dialogue_act_features(post.text), post.get('class')) for post in posts]
-	size = int(len(featuresets) * 0.1)
-	train_set, test_set = featuresets[size:], featuresets[:size]
-	classifier = nltk.NaiveBayesClassifier.train(train_set)
-	print(nltk.classify.accuracy(classifier, test_set))
+classifier = nltk.NaiveBayesClassifier.train(train_set)
+nltk.classify.accuracy(classifier, test_set)
 
-###  Recognizing Textual Entailment 识别文本含义
+# sentence segmentation using the above classifier
+def segment_sentences(words):
+    start = 0
+    sents = []
+    for i, word in enumerate(words):
+        if word in '.?!' and classifier.classify(punct_features(words, i)) == True:
+            sents.append(words[start:i+1])
+            start = i+1
+    if start < len(words):
+        sents.append(words[start:])
+    return sents
+```
+
+### Identifying Dialogue Act Types 对话动作类型识别
+
+对话动作类型指的是一段文本是表示提问的，回答的，疑问的，欢迎的，声明的等等，在 NLTK 语料库提供了关于对话动作类型的分类：
+
+```python
+# get the xml version of post
+posts = nltk.corpus.nps_chat.xml_posts()[:10000]
+
+# feature extractor
+# 这里假设对话动作类型取决于对话中的单词
+def dialogue_act_features(post):
+    features = {}
+    for word in nltk.word_tokenize(post):
+        features['contains({})'.format(word.lower())] = True
+    return features
+
+featuresets = [(dialogue_act_features(post.text), post.get('class')) for post in posts]
+size = int(len(featuresets) * 0.1)
+train_set, test_set = featuresets[size:], featuresets[:size]
+classifier = nltk.NaiveBayesClassifier.train(train_set)
+print(nltk.classify.accuracy(classifier, test_set))
+```
+
+###  Recognizing Textual Entailment 识别文本蕴含
 Recognizing textual entailment (RTE) is the task of determining whether a given piece of text T entails another text called the "hypothesis" . It should be emphasized that the relationship between text and hypothesis is not intended to be logical entailment, but rather whether a human would conclude that the text provides reasonable evidence for taking the hypothesis to be true.
 
-识别文本含义任务，判断给定的一段文本是否隐含着另一个假设文本的含义。应当强调的是，文本和假设之间的关系不是意在是逻辑上的蕴涵，而是一个人是否会得出结论认为文本提供了合理的证据来使假设成为真实。本质上来讲这是一个分类问题，给定(text, hypothesis)为其打标签true或false，要想成功的推断蕴含问题需要复杂的文本，语义分析技术，下面我们对文本进行了简单分析，假设如果hypothesis中表示的所有信息在text中出现了，则蕴含关系成立，如果hypothesis中表示的信息在text中没有出现则不存在蕴含关系
+![](textual-entailment.png)
 
-	# feature extractor
-	def rte_features(rtepair):
-	    extractor = nltk.RTEFeatureExtractor(rtepair)
-	    features = {}
-	    # 同时出现的单词数
-	    features['word_overlap'] = len(extractor.overlap('word'))
-	    # 在hypothesis且不在text中的单词数
-	    features['word_hyp_extra'] = len(extractor.hyp_extra('word'))
-	    # 统计命名实体的数量，即人名，地名，组织名等单词
-	    features['ne_overlap'] = len(extractor.overlap('ne'))
-	    features['ne_hyp_extra'] = len(extractor.hyp_extra('ne'))
-	    return features
+识别文本含义任务，判断给定的一段文本是否隐含着另一个假设文本的含义。应当强调的是，文本和假设之间的关系不是在是逻辑上的蕴涵，而是一个人是否会得出结论认为文本提供了合理的证据来使假设成为真实。本质上来讲这是一个分类问题，给定 (text, hypothesis) 为其打标签 true 或 false，要想成功的推断蕴含问题需要复杂的文本，语义分析技术，下面我们对文本进行了简单分析，假设如果 hypothesis 中表示的所有信息在 text 中出现了，则蕴含关系成立，如果 hypothesis 中表示的信息在 text 中没有出现则不存在蕴含关系：
 
-### Scaling Up to Large Datasets
+```python
+# feature extractor
+def rte_features(rtepair):
+    extractor = nltk.RTEFeatureExtractor(rtepair)
+    features = {}
+    # 同时出现的单词数
+    features['word_overlap'] = len(extractor.overlap('word'))
+    # 在hypothesis且不在text中的单词数
+    features['word_hyp_extra'] = len(extractor.hyp_extra('word'))
+    # 统计命名实体的数量，即人名，地名，组织名等单词
+    features['ne_overlap'] = len(extractor.overlap('ne'))
+    features['ne_hyp_extra'] = len(extractor.hyp_extra('ne'))
+    return features
+```
+
+### Scaling Up to Large Datasets 分类器应用于大数据集
 Python provides an excellent environment for performing basic text processing and feature extraction. However, it is not able to perform the numerically intensive calculations required by machine learning methods nearly as quickly as lower-level languages such as C. Thus, if you attempt to use the pure-Python machine learning implementations (such as nltk.NaiveBayesClassifier) on large datasets, you may find that the learning algorithm takes an unreasonable amount of time and memory to complete.
 
 If you plan to train classifiers with large amounts of training data or a large number of features, we recommend that you explore NLTK's facilities for interfacing with external machine learning packages. Once these packages have been installed, NLTK can transparently invoke them (via system calls) to train classifier models significantly faster than the pure-Python classifier implementations. See the NLTK webpage for a list of recommended machine learning packages that are supported by NLTK.
 
-NLTK中的机器学习算法是用python写的，在处理大型数据集时会很耗时，为了效率的考虑可以使用NLTK提供的package来更外部的机器学习算法库来交互
+NLTK 中的机器学习算法是用 python 写的，在处理大型数据集时会很耗时，为了效率的考虑可以使用 NLTK 提供的接口来同外部的机器学习算法库来交互。
 
-### Evaluation 模型评估
+## Evaluation 模型评估
+
 In order to decide whether a classification model is accurately capturing a pattern, we must evaluate that model. The result of this evaluation is important for deciding how trustworthy the model is, and for what purposes we can use it. Evaluation can also be an effective tool for guiding us in making future improvements to the model.
 
-对模型评估不仅仅可以指导我们改进模型，还可以帮助我们确定模型的可信度
+对模型评估不仅仅可以指导我们改进模型，还可以帮助我们确定模型的可信度。
+
+### Test Set
 
 Most evaluation techniques calculate a score for a model by comparing the labels that it generates for the inputs in a test set (or evaluation set) with the correct labels for those inputs. This test set typically has the same format as the training set. However, it is very important that the test set be distinct from the training corpus: if we simply re-used the training set as the test set, then a model that simply memorized its input, without learning how to generalize to new examples, would receive misleadingly high scores.
 
 When building the test set, there is often a trade-off between the amount of data available for testing and the amount available for training. For classification tasks that have a small number of well-balanced labels and a diverse test set, a meaningful evaluation can be performed with as few as 100 evaluation instances. But if a classification task has a large number of labels, or includes very infrequent labels, then the size of the test set should be chosen to ensure that the least frequent label occurs at least 50 times. Additionally, if the test set contains many closely related instances — such as instances drawn from a single document — then the size of the test set should be increased to ensure that this lack of diversity does not skew the evaluation results. When large amounts of annotated data are available, it is common to err on the side of safety by using 10% of the overall data for evaluation.
 
+评分过程通常是这样的，根据模型打的 label 跟测试集的 label 比较来确定准确率，因此保证测试集跟训练集的差异化是极其重要的，如果在评分过程中继续使用原来的训练集会导致模型完全依赖训练集，不能推广到一般数据集上，当构建测试集时常常需要权衡测试集跟训练集的大小比例，当测试集中 label 多样性和均衡性足够好时可以进行较少的评分次数，当数据集中的 label 数量多且有的 label 出现次数很少时，需要测试集足够大到可以涵盖哪些低频的 label，此外如果测试集中含有许多相关性数据时（比如来自同一个文档中的文本），测试集必须足够大以弥补多样性的缺失，当数据集足够大时，建议使用不少于 10% 的数据作为测试集。
+
 Another consideration when choosing the test set is the degree of similarity between instances in the test set and those in the development set. The more similar these two datasets are, the less confident we can be that evaluation results will generalize to other datasets. 
 
-评分过程通常是这样的，根据模型打的label跟测试集的label比较来确定准确率，因此保证测试集跟训练集的差异化是极其重要的，如果在评分过程中继续使用原来的训练集会导致模型完全依赖训练集，不能推广到一般数据集上，当构建测试集时常常需要权衡测试集跟训练集的大小比例，当测试集中label多样性和均衡性足够好时可以进行较少的评分次数，当数据集中的label数量多且有的label出现次数很少时，需要测试集足够大到可以涵盖哪些低频的label，此外如果测试集中含有许多相关性数据时（比如来自同一个文档中的文本），测试集必须足够大以弥补多样性的缺失，当数据集足够大时，建议使用不少于10%的数据作为测试集。
+如果训练集和测试集是十分相似的，那么我们对模型的可信度会降低，因为训练到的模型无法很好的泛化到其它的数据集上，如下仅仅使用了 news 数据集，是无法泛化到其它类型的文本的：
 
-The simplest metric that can be used to evaluate a classifier, accuracy, measures the percentage of inputs in the test set that the classifier correctly labeled
+```
+tagged_sents = list(brown.tagged_sents(categories='news'))
+random.shuffle(tagged_sents)
+size = int(len(tagged_sents) * 0.1)
+train_set, test_set = tagged_sents[size:], tagged_sents[:size]
+```
 
-最简单的评分方法是，计算模型预测正确label跟总量的比例，即精确度，nltk.classify.accuracy()，但是像搜索引擎这样用来计算检索跟文档相关性的模型，因为文档数量巨大，必然有很多文档跟检索是不相关的（这个比例可能近100%），如果以精确度作为评分方法，显然将所有文档标记为不相关的模型，其精确度却接近100%，一般化描述这个问题，当label在数据集中分布极其不均匀时，精确度评分的方法是失效的，下面介绍一种新的评分方法
+并且上例还存在一个问题，经过 shuffle 打乱后，训练集和测试集可能会出现来自同一个文档中的单词，要避免这样做，最好让它们使用不同文档的文本：
 
-检索结果分成如下四类
+```
+file_ids = brown.fileids(categories='news')
+size = int(len(file_ids) * 0.1)
+train_set = brown.tagged_sents(file_ids[size:])
+test_set = brown.tagged_sents(file_ids[:size])
+```
+
+### Metric Methods 度量方法
+
+#### Accuracy
+
+The simplest metric that can be used to evaluate a classifier, accuracy, measures the percentage of inputs in the test set that the classifier correctly labeled.
+
+最简单的评分方法是，计算模型预测正确 label 跟总量的比例，即精确度（accuracy） `nltk.classify.accuracy()` 但是像搜索引擎这样用来计算检索跟文档相关性的模型，因为文档数量巨大，必然有很多文档跟检索是不相关的（这个比例可能近100%），如果以精确度作为评分方法，显然将所有文档标记为不相关的模型，其精确度却接近100%，一般化描述这个问题，当 label 在数据集中分布极其不均匀时，精确度评分的方法是失效的，下面介绍几种新的评分方法。
+
+#### Precision and Recall
+
+首先我们将分类（信息检索）结果划分为如下四种
 
 * True positives are relevant items that we correctly identified as relevant.
 * True negatives are irrelevant items that we correctly identified as irrelevant.
 * False positives (or Type I errors) are irrelevant items that we incorrectly identified as relevant.
 * False negatives (or Type II errors) are relevant items that we incorrectly identified as irrelevant.
 
-TP 表示将相关结果标记为相关的；TN 表示将不相关的结果标记为不相关的；FP 表示将不相关的结果标记为相关的；FN 表示将相关的结果标记为不相关的
+TP 表示将相关结果标记为相关的；TN 表示将不相关的结果标记为不相关的；FP 表示将不相关的结果标记为相关的；FN 表示将相关的结果标记为不相关的。
 
-Precision记作TP/(TP+FP)，即相关标记中的正确率
+![](precision-recall.png)
 
-Recall记作TP(TP+FN)，即相关标记占实际相关量的比率
 
-F-Score记作(2*Precision*Recall)/(Precision+Recall)
 
-如果想要了解模型打label时到底是在哪个label上错了，错了多少比例可以移步NLTK的Confusion Matrices
+Precision 记作：TP/(TP+FP)，即相关标记中的正确率
+
+Recall 记作：TP(TP+FN)，即相关标记占实际相关量的比率
+
+F-Score 记作： (2PrecisionRecall)/(Precision+Recall)，即 precision 和 recall 的调和平均
+
+#### Confusion Matrix
+
+When performing classification tasks with three or more labels, it can be informative to subdivide the errors made by the model based on which types of mistake it made. A confusion matrix is a table where each cell [i,j] indicates how often label j was predicted when the correct label was i. Thus, the diagonal entries indicate labels that were correctly predicted, and the off-diagonal entries indicate errors. You can create confusion matrix by NLTK: `nltk.ConfusionMatrix`.
+
+#### Cross Validation
 
 In order to evaluate our models, we must reserve a portion of the annotated data for the test set. As we already mentioned, if the test set is too small, then our evaluation may not be accurate. However, making the test set larger usually means making the training set smaller, which can have a significant impact on performance if a limited amount of annotated data is available.
 
@@ -1931,12 +2003,24 @@ One solution to this problem is to perform multiple evaluations on different tes
 
 A second, and equally important, advantage of using cross-validation is that it allows us to examine how widely the performance varies across different training sets. If we get very similar scores for all N training sets, then we can be fairly confident that the score is accurate. On the other hand, if scores vary widely across the N training sets, then we should probably be skeptical about the accuracy of the evaluation score.
 
-交叉检验，前面提到对训练集和测试集比例分配需要我们权衡，交叉检验是针对数据集较小时，一种有效的方案，即不影响训练集大小，又不影响测试集大小。过程如下，先将数据集分成N份，然后将第一份数据作为测试集，其他数据用来训练模型，接着以第二个数据作为测试集，其他所有数据作为训练集，以此类推训练N个模型，然后对其综合评分，这样的好处在于训练集和测试集都充分利用了数据，此外如果各个模型的评分比较相似的话，我们可以认为评分是精确的，反之，则会怀疑模型的可信度
+交叉检验，前面提到对训练集和测试集比例分配需要我们权衡，交叉检验是针对数据集较小时，一种有效的方案，即不影响训练集大小，又不影响测试集大小。过程如下，先将数据集分成 N 份，然后将第一份数据作为测试集，其他数据用来训练模型，接着以第二个数据作为测试集，其他所有数据作为训练集，以此类推训练 N 个模型，然后对其综合评分，这样的好处在于训练集和测试集都充分利用了数据，此外如果各个模型的评分比较相似的话，我们可以认为评分是精确的，反之，则会怀疑模型的可信度。
+
+## Classification Models
+
+In the next three sections, we'll take a closer look at three machine learning methods that can be used to automatically build classification models: decision trees, naive Bayes classifiers, and Maximum Entropy classifiers. As we've seen, it's possible to treat these learning methods as black boxes, simply training models and using them for prediction without understanding how they work. But there's a lot to be learned from taking a closer look at how these learning methods select models based on the data in a training set. An understanding of these methods can help guide our selection of appropriate features, and especially our decisions about how those features should be encoded. And an understanding of the generated models can allow us to extract information about which features are most informative, and how those features relate to one another.
 
 ### Decision Tree
-决策树为input指定label，决策树中含有决策节点和叶节点，叶节点中包含label，决策节点包含测试条件，对input的某个feature进行测试，然后根据测试结果选取树分支，然后继续在分支树上进行测试，直到到达叶节点后，输出相应label作为input的label
+#### 决策树结构以及使用它进行预测
 
-根据训练集构建决策树，先让我们看个简单情形，仅含有一个决策节点（包含一个feature的测试）以及若干叶节点（每个节点对应一个可能的feature value的情况，也对应一个label）。首先需要考虑的问题是，应该选取哪个feature用来决策测试，简单粗暴的方法是，依次选取所有features，观察选取哪个feature时，在训练集上的准确率最高，将该feature作为决策使用的feature，然后每个feature value对应一个叶节点，训练集中feature value时最高频的label最为该叶节点的label。递归的应用上述算法就可以构建基于整个训练集的决策树，先选取最佳feature构建根节点以及叶节点，然后评估叶节点分类结果的准确率，如果准确率难以接受，则基于父节点分类传递下来的样本集为基础继续构建决策树，直到所有叶节点分类结果准确率都可接受
+A decision tree is a simple flowchart that selects labels for input values. This flowchart consists of **decision nodes**, which check feature values, and **leaf nodes**, which assign labels. To choose the label for an input value, we begin at the flowchart's initial decision node, known as its root node. This node contains a condition that checks one of the input value's features, and selects a branch based on that feature's value. Following the branch that describes our input value, we arrive at a new decision node, with a new condition on the input value's features. We continue following the branch selected by each node's condition, until we arrive at a leaf node which provides a label for the input value.
+
+决策树为input指定label，决策树中含有决策节点和叶节点，叶节点中包含label，决策节点包含测试条件，对input的某个feature进行测试，然后根据测试结果选取树分支，然后继续在分支树上进行测试，直到到达叶节点后，输出相应label作为input的label。
+
+#### 如何训练决策树
+
+根据训练集构建决策树，先让我们看个简单情形，仅含有一个决策节点（包含一个feature的测试）以及若干叶节点（每个节点对应一个可能的feature value的情况，也对应一个label）。首先需要考虑的问题是，应该选取哪个feature用来决策测试，简单粗暴的方法是，依次选取所有features，观察选取哪个feature时，在训练集上的准确率最高，即将该feature作为决策条件，然后每个feature value对应一个叶节点，此叶节点的label由属于该叶节点的所有样本中最高频的那个label决定。
+
+然后不断递归的应用上述算法就可以构建基于整个训练集的决策树，先选取最佳feature构建根节点以及叶节点，然后评估叶节点分类结果的准确率，如果准确率难以接受，则基于父节点分类传递下来的样本集为基础继续构建决策树，直到所有叶节点分类结果准确率都可接受。
 
 Information Gain，利用信息增量来选取决策feature，即用来度量根据给定feature对输入集分类后使得数据集更加organized。可以使用基于labels的熵来度量数据集的disorganized程度，大致来说当数据集对应的label较多时，熵较大，当数据集对应的label较少时，熵较小，更进一步根据熵的定义公式可知，当某个label的概率很小或者很大时都对熵值的贡献不大，对熵值起决定性作用的是那些概率大小中等的lable。下面我们将Inforamtion Gain和Entropy应用于决策树构建过程，首先计算原始数据集labels的熵，在选取feature划分数据集后为叶节点计算熵，然后对叶节点熵值进行加权平均（权重为落在叶节点中的样本点数量），用原始数据集labels的熵减去叶节点加权平均熵等于信息增量（也即熵减量），显然信息增量越高则说明对数据集的划分越好，因此在选取feature时可以将使得信息增量最大为依据
 
