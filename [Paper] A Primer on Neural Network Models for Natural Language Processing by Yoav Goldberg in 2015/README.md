@@ -1515,5 +1515,114 @@ GRU for achieving similar benefits.
 
 Please see (Mikolov et al 2014) and (Le, Jaitly, & Hinton, 2015).
 
+# Recursive Neural Networks
 
+## Motivation
+
+The RNN is very useful for modeling sequences. In language processing, it is often natural
+and desirable to work with **tree structures**. The trees can be syntactic trees, discourse trees,
+or even trees representing the sentiment expressed by various parts of a sentence (Socher
+et al., 2013). We may want to predict values based on specic tree nodes, predict values
+based on the root nodes, or assign a quality score to a complete tree or part of a tree. In
+other cases, we may not care about the tree structure directly but rather reason about spans
+in the sentence. In such cases, the tree is merely used as a backbone structure which help
+guide the encoding process of the sequence into a fixed size vector.
+
+The recursive neural network (**RecNN**) abstraction (Pollack, 1990), popularized in NLP
+by Richard Socher and colleagues (Socher, Manning, & Ng, 2010; Socher, Lin, Ng, & Manning,
+2011; Socher et al., 2013; Socher, 2014) is a generalization of the RNN from sequences
+to (binary) trees.
+
+Much like the RNN encodes each **sentence prefix** as a state vector, the RecNN encodes each **tree-node** as a state vector. We can then use these state vectors either to predict values of the corresponding nodes, assign quality values to each node, or as a semantic representation of the spans rooted at the nodes.
+
+The main intuition behind the **recursive** neural networks is that each subtree is represented as a d dimensional vector, and the representation of a node $p$ with children $c_1$ and $c_2$ is a function of the representation of the nodes: $v(p)=f(v(c_1), v(c_2))$, where $f$ is a composition function taking two d-dimensional vectors and returning a single d-dimensional vector. The RecNN state associated with a tree node $p$ encodes the entire subtree rooted at $p$. 
+
+![](recnn-for-tree.png)
+
+
+
+
+
+## Tree Representation
+
+An unlabeled tree over a sequence $x_{i:n}$ can be represented as a unique set of triplets $(i,k,j)$. Each such triplet indicates that a node spanning words $x_{i:j}$ is parent of the nodes spanning $x_{i:k}$ and $x_{k+1:j}$. Moving from the unlabeled case to the labeled one, we can represent a tree as a set of 6-tuples $(A \to B,C,i,k,j)$, where  A, B and C are the node labels of of the nodes spanning $x_{i:j}$, $x_{i:k}$ and $x_{k+1:j}$ respectively. We refer to such tuples as **production rules**. 
+
+For an example, consider the **syntactic tree** for the sentence "the boy saw her duck".
+
+![](syntactic-tree.png)
+
+Its corresponding unlabeled and labeled representations are :
+
+![](syntactic-tree-representation.png)
+
+The given set of production rules can be uniquely converted to a set tree nodes.
+
+## RecNN Architecture
+
+A Recursive Neural Network (RecNN) is a function that takes as **input** a parse tree over an n-word sentence $x_1,\dots,x_n$. And the tree is represented as a set $T$ of production rules $(A \to B,C,i,k,j)$. The nodes of tree is denoted by $q_{i:j}^A$.
+
+The RecNN returns as **output** a corresponding set of inside state vectors $s_{i:j}^A$, where each inside state vector represents the corresponding tree node  $q_{i:j}^A$, and encodes the entire structure rooted at that node.
+
+Like the sequence RNN, the tree shaped RecNN is defined recursively using a function $R$, where
+the inside vector of a given node is defined as a function of the inside vectors of its direct children:
+
+
+$$
+\begin{equation}
+\begin{split}
+RecNN(x_{1:n},T) &=\{s_{i:j}^A | q_{i:j}^A \in T\} \\
+s_{i:i}^A &=v(x_i) \\
+s_{i:j}^A &=R(A,B,C,s_{i:k}^B,s_{k+1:j}^C) \qquad q_{i:k}^B \in T \quad q_{k+1:j}^C in T
+\end{split}
+\end{equation}
+$$
+
+
+The function $R$ usually takes the form of a simple linear transformation, which may or may not be followed by a non-linear activation function:
+
+
+$$
+R(A,B,C,s_{i:k}^B,s_{k+1:j}^C)=\alpha([s_{i:k}^B;s_{k+1:j}^C]W)
+$$
+
+
+This formulation of R ignores the tree labels, using the same matrix $W$ for combinations. This may be a useful formulation in case the node labels do not exist (e.g. when the tree does not represent a syntactic structure with clearly defined labels) or when they are unreliable. However, if the labels are available, it is generally useful to include them in the composition function. One approach would be to introduce label embeddings $v(A)$ mapping each non-terminal symbol to a vector:
+
+
+$$
+R(A,B,C,s_{i:k}^B,s_{k+1:j}^C)=\alpha([s_{i:k}^B;s_{k+1:j}^C;v(A);v(B)]W)
+$$
+
+
+Such approach is taken by (Qian, Tian, Huang, Liu, Zhu, & Zhu, 2015).
+
+An alternative approach, due to (Socher et al., 2013) is to untie the weights according to the non-terminals, using a different composition matrix for each B;C pair of symbols:
+
+
+$$
+R(A,B,C,s_{i:k}^B,s_{k+1:j}^C)=\alpha([s_{i:k}^B;s_{k+1:j}^C]W^{BC})
+$$
+
+
+This formulation is useful when the number of non-terminal symbols (or the number of
+possible symbol combinations) is relatively small, as is usually the case with phrase-structure
+parse trees. A similar model was also used by (Hashimoto et al., 2013) to encode subtrees
+in semantic-relation classification task.
+
+## Variants
+
+As all of the denitions of R above suer from the vanishing gradients problem of the
+Simple RNN, several authors sought to replace it with functions inspired by the Long Short-
+Term Memory (LSTM) gated architecture, resulting in **Tree-shaped LSTMs** (Tai, Socher, &
+Manning, 2015; Zhu, Sobhani, & Guo, 2015b).
+
+Other proposed variants on tree-structured RNNs includes
+a recursive matrix-vector model (Socher, Huval, Manning, & Ng, 2012) and recursive neural
+tensor network (Socher et al., 2013). In the rst variant, each word is represented as a
+combination of a vector and a matrix, where the vector denes the word's static semantic
+content as before, while the matrix acts as a learned \operator" for the word, allowing
+more subtle semantic compositions than the addition and weighted averaging implied by
+the concatenation followed by linear transformation function. In the second variant, words
+are associated with vectors as usual, but the composition function becomes more expressive
+by basing it on tensor instead of matrix operations
 
