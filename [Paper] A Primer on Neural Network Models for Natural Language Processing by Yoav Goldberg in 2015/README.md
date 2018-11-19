@@ -1244,5 +1244,276 @@ How can we encode arbitrary length sequences as **fixed sized vectors**, while 
   structured inputs in a fixed-size vector, while paying attention to the structured properties
   of the input.
 
+## RNN Abstraction
+
+### Graphical Representation
+
+![](rnn-recursive.png)
+
+![](rnn-unrolled.png)
+
+The RNN model provides a framework for conditioning on the entire history $x_1,\dots,x_n$ without resorting to the Markov assumption which is traditionally used for modeling sequences. Indeed, RNN-based language models result in very good perplexity scores when compared to n-gram based models.
+
+### Mathematical Representation
+
+The RNN abstraction takes as **input an ordered list** of input vectors $x_1,\dots,x_n$ together with an **initial state vector** $s_{0}$, and **returns an ordered list** of state vectors $s_1,\dots,s_n$, as well as **another ordered list** of output vectors $y_1,\dots,y_n$.
+
+
+$$
+s_{1:n},y_{1:n}=RNN(s_0,x_{1:n})
+$$
+
+
+where the state vector $s_{i}$ is a function of previous state $s_{i-1}$ and input vector $x_{i}$; the output vector $y_{i}$ is a function of the corresponding state vector $s_{i}$ and $y_{i}$ is then used for further prediction, for example, $P(e|x_{1:n})=softmax(y_iW+b)$.
+
+We have a recursively defined function $R$ that takes as input a state vector $s_{i-1}$ and an input vector $x_{i}$, and results in a new state vector $s_{i}$, defined as follows:
+
+
+$$
+s_i = R(s_{i-1},x_i)
+$$
+
+
+An additional function $O$ is used to map a state vector $s_{i}$ to an output vector $y_{i}$, defined as follows:
+
+
+$$
+y_i = O(s_i)
+$$
+
+
+Note: The functions $R$ and $O$ are the same across the sequence positions. And the same parameters are shared across all time steps.
+
+### RNN Instances
+
+Different instantiations of $R$ and $O$ will result in different network structures, and will exhibit different
+properties in terms of their running times and their ability to be trained effectively using
+gradient-based methods. However, they all adhere to the same abstract interface. We will
+provide details of concrete instantiations of  $R$ and $O$ - the **Simple RNN**, the** LSTM** and the
+**GRU**.
+
+### Representation for Input Sequence
+
+We note that the value of $s_{n}$ is based on the entire input $x_1,\dots,x_{n}$. Thus, $s_{n}$ (as well as $y_{n}$) could be thought of as encoding the entire input sequence.
+
+Is the encoding useful? This depends on our denfition of usefulness. The job of the network training is to set the parameters of $R$ and $O$ such that the state conveys useful information for the task we are tying to solve.
+
+## Various Ways for Learning RNN
+
+The unrolled RNN is just a very deep neural network, in which the same parameters are shared across many parts of the computation. We can use the backward (backpropagation) algorithm to compute the gradients with respect to loss to train RNN. This procedure is referred to in the RNN literature as backpropagation through time, or **BPTT** (Werbos, 1990).
+
+There are various ways in which the supervision signal can be applied.
+
+### Acceptor
+
+One option is to base the supervision signal only on the final output vector $y_{n}$. The RNN is viewed as an acceptor. We observe the final state, and then decide on the outcome.
+
+For example, consider training an RNN to read the characters of a word one by one and then use the final state to predict the part-of-speech of that word (this is inspired by (Ling et al., 2015b)), an RNN that reads in a sentence and, based on the final state decides if it conveys positive or negative sentiment (this is inspired by (Wang et al., 2015b)) or an RNN that reads in a sequence of words and decides whether it is a valid noun-phrase.
+
+![](rnn-acceptor.png)
+
+### Transducer
+
+Another option is to treat the RNN as a transducer, producing an output for each input it reads in. Modeled this way, we can compute a local loss signal $L_\text{local}(\hat y_{i}; y_{i})$ for each of the outputs $\hat y_{i}$ based on a true label $y_{i}$. The loss for unrolled sequence will then be: $L(\hat y_{1:n}, y_{1:n})=\sum_{i}^{n}L_\text{local}(\hat y_{i}; y_{i})$, or using another combination rather than a sum such as an average or a weighted average.
+
+![](rnn-transducer.png)
+
+One example for such a transducer is a **sequence tagger**, in which we take $x_{i:n}$ to be feature representations for the words of a sentence, and $y_{i}$ as an input for predicting the tag assignment of word $i$ based on words $1:i$. A CCG super-tagger based on such an architecture provides state-of-the art CCG super-tagging results (Xu et al., 2015).
+
+A very natural use-case of the transduction setup is for **language modeling**, in which the sequence of words $x_{1:i}$ is used to predict a distribution over the $i + 1$ th word. language models are shown to provide much better perplexities than traditional language models (Mikolov et al., 2010; Sundermeyer, Schluter, & Ney, 2012; Mikolov, 2012).
+
+Using RNNs as transducers allows us to relax the Markov assumption that is traditionally
+taken in language models and HMM taggers, and condition on the entire prediction
+history. The power of the ability to condition on arbitrarily long histories is demonstrated
+in generative character-level RNN models, in which a text is generated character by character,
+each character conditioning on the previous ones (Sutskever, Martens, & Hinton, 2011).
+The generated texts show sensitivity to properties that are not captured by n-gram language
+models, including line lengths and nested parenthesis balancing. For a good demonstration
+and analysis of the properties of RNN-based character level language models, see (Karpathy,
+Johnson, & Li, 2015).
+
+### Encoder
+
+Similar to the acceptor case, an encoder supervision uses only the final output vector $y_{n}$. However, unlike the acceptor, where a prediction is made solely on the basis of the final vector, here the final vector is treated as an encoding of the information in the sequence, and is used as additional information together with other signals.
+
+![](rnn-encoder.png)
+
+For example, an extractive document summarization system may first run over the document with an RNN,
+resulting in a vector $y_{n}$ summarizing the entire document. Then, $y_{n}$ will be used together with other features in order to select the sentences to be included in the summarization.
+
+### Encoder-Decoder
+
+An important special case of the encoder scenario is the Encoder-Decoder framework (Cho, van Merrienboer, Bahdanau, & Bengio, 2014a; Sutskever et al., 2014). The RNN is used to encode the sequence into a vector representation $y_n$, and this vector representation is then used as auxiliary input to another RNN that is used as a decoder.
+
+
+
+![](rnn-encoder-decoder.png)
+
+For example, in a **machine-translation** setup the first RNN encodes the source sentence into a vector representation $y_{n}$, and then this state vector is fed into a separate (decoder) RNN that is trained to predict (using a transducer-like language modeling objective) the words of the target language sentence based on the previously predicted words as well as $y_{n}$. The supervision happens only for the decoder RNN, but the gradients are propagated all the way back to the encoder RNN.Such an approach was shown to be surprisingly effective for Machine Translation (Sutskever et al., 2014) using LSTM RNNs. In order for this technique to work, Sutskever et al found it effective to input the source sentence in reverse, such that $x_n$ corresponds to the first word of the sentence. In this way, it is easier for the second RNN to establish the relation between the first word of the source sentence to the first word of the target sentence. 
+
+![](rnn-encoder-decoder-mt.png)
+
+Another use-case of the encoder-decoder framework is for **sequence transduction**. Here, in order to generate tags $t_1,\dots,t_n$, an encoder RNN is first used to encode the sentence $x_{1:n}$ into fixed sized vector. This vector is then fed as the initial state vector of another (transducer) RNN, which is used together with $x_{1:n}$ to predict the label $t_i$ at each position $i$. This approach was used in (Filippova, Alfonseca, Colmenares, Kaiser, & Vinyals, 2015) to model sentence compression by deletion.
+
+## Stacked-RNN
+
+RNNs can be **stacked** in layers, i.e. **multi-layers RNN**, forming a grid (Hihi & Bengio, 1996).
+
+Such layered architectures are often called **deep RNNs**. A visual representation of a 3-layer RNN is given as follows:
+
+![](rnn-multi-layers.png)
+
+While it is not theoretically clear what is the additional power gained by the deeper
+architecture, it was observed empirically that deep RNNs work better than shallower ones
+on some tasks. In particular, Sutskever et al (2014) report that a 4-layers deep architecture
+was crucial in achieving good machine-translation performance in an encoder-decoder
+framework.
+
+## Bi-RNN
+
+A useful elaboration of an RNN is a bidirectional-RNN (**Bi-RNN**) (Schuster & Paliwal, 1997; Graves, 2008). When used with a specfic RNN architecture such as an LSTM, the model is called **Bi-LSTM**.
+
+Consider the task of sequence tagging over a sentence $x_{1:n}$. An RNN allows us to compute a function of the i-th word $x_{i}$ based on the past - the words $x_{1:i}$ up to and including it. However, the following words $x_{i:n}$ may also be useful for prediction, as is evident by the common sliding-window approach in which the focus word is categorized based on a window of k words surrounding it. Much like the RNN relaxes the Markov assumption and allows looking arbitrarily back into the past, the BI-RNN relaxes the fixed window size assumption, allowing to look arbitrarily far at both the past and the future.
+
+The Bi-RNN works by maintaining two separate states, $s_i^f$ and $s_i^b$ for each input position $i$. The forward state $s_i^f$ is based on $x_{1:i}$, while the backward state $s_i^b$ is based on $x_{n:i}$. The forward and backward states
+are generated by two different RNNs. The first RNN ($R^f$ , $O^f$ ) is fed the input sequence $x_{1:n}$ as is, while the second RNN ($R^b$, $O^b$) is fed the input sequence in reverse. The output at position $i$ is based on the concatenation of the two output vectors $y_i=[y_i^f;y_i^b]=[O^f(s_i^f);O^b(s_i^b)]$. The vector $y_i$ can then be used directly for prediction, or fed as part of the input to a more complex network. 
+
+![](rnn-bi-rnn.png)
+
+The use of BI-RNNs for sequence tagging was introduced to the NLP community by Irsoy and Cardie (2014).
+
+## RNNs for Representing Stacks
+
+Some algorithms in language processing, including those for transition-based parsing (Nivre,
+2008), require performing feature extraction over a stack. Instead of being confined to looking at the k top-most elements of the stack, the RNN framework can be used to provide **a fixed-sized vector encoding of the entire stack**.
+
+The main intuition is that a stack is essentially a sequence, and so the stack state can be
+represented by taking the stack elements and feeding them in order into an RNN, resulting
+in a final encoding of the entire stack. In order to do this computation efficiently (without
+performing an O(n) stack encoding operation each time the stack changes), the **RNN state
+is maintained together with the stack state**.
+
+If the stack was push-only, this would be trivial: whenever a new element $x$ is pushed into the stack, the corresponding vector $x$ will be used together with the RNN state $s_i$ in order to obtain a new state $s_{i+1}$. Dealing with pop operation is more challenging, but can be solved by using the **persistent-stack
+data-structure** (Okasaki, 1999; Goldberg, Zhao, & Huang, 2013). Persistent, or immutable,
+data-structures keep old versions of themselves intact when modfied. The persistent stack
+construction represents a stack as a pointer to the head of a linked list. The push operation appends an element to the list, returning the new head. The pop operation then returns the parent of the head, but keeping the original list intact. Applying this procedure throughout the lifetime of the stack results in a tree, where the root is an empty stack and **each path from a node to the root represents an intermediary stack state**.
+
+![](stack-states-as-tree.png)
+
+The same process can be applied in the computation graph construction, creating an RNN with a tree structure instead of a chain structure.
+
+![](rnn-for-stack-representation.png)
+
+This modeling approach was proposed independently by Dyer et al and Watanabe et al (Dyer
+et al., 2015; Watanabe & Sumita, 2015) for transition-based dependency parsing.
+
+## RNN Instances
+
+### Simple RNN
+
+The simplest RNN formulation, known as an Elman Network or Simple-RNN (**S-RNN**), was proposed by Elman (1990) and explored for use in language modeling by Mikolov (2012).
+
+The S-RNN takes the following form:
+
+
+$$
+s_i = R(s_{i-1},x_i)=\alpha(x_iW^x+s_{i-1}W^s+b) \\
+y_i = O(s_i)=s_i
+$$
+
+
+where the non-linear activation $\alpha$ is tanh or ReLU.
+
+In spite of its simplicity, the Simple RNN provides strong results for **sequence tagging** (Xu et al., 2015) as well as **language modeling**. For comprehensive discussion on using Simple RNNs for language modeling, see the PhD thesis by Mikolov (2012).
+
+The S-RNN is hard to train effectively because of the **vanishing gradients problem**. Error signals (gradients) in later steps in the sequence diminish quickly in the back-propagation process, and do not reach earlier input signals, making it hard for the S-RNN to capture **long-range dependencies**.
+
+### LSTM
+
+The Long Short-Term Memory (LSTM) architecture (Hochreiter
+& Schmidhuber, 1997) was **designed to solve the vanishing gradients problem**. The main
+idea behind the LSTM is to introduce as part of the state representation also **memory
+cells** (a vector) that can preserve gradients across time. Access to the memory cells is
+controlled by **gating components** - smooth mathematical functions that simulate logical
+gates. At each input state, a gate is used to decide how much of the new input should be
+**written to the memory cell**, and how much of the current content of the **memory cell should
+be forgotten**.
+
+LSTM architecture is defined as:
+
+
+$$
+\begin{equation}
+\begin{split}
+
+s_j = R(s_{j-1},x_j) &=[c_j;h_j] \\
+\\
+i &= \sigma(x_jW^{xi}+h_{j-1}W^{hi}) \\
+f &= \sigma(x_jW^{xf}+h_{j-1}W^{hf}) \\
+o &= \sigma(x_jW^{xo}+h_{j-1}W^{ho}) \\
+g &= \tanh(x_jW^{xg}+h_{j-1}W^{hg}) \\
+c_j &= c_{j-1} \odot f + g \odot i \\
+h_j & = \tanh(c_j) \odot o \\
+\\
+y_j = O(s_j) &= h_j
+\end{split}
+\end{equation}
+$$
+
+
+The state $s_{j}$ at time $j$ is composed of two vectors, $c_j$ and $h_j$, where $c_j$ is the **memory component** and $h_j$ is the **output component**. There are three gates, $i$, $f$ and $o$, controlling for **input**, **forget** and **output**. An update candidate $g$ is computed as a linear combination of $x_j$ and $h_{j-1}$, passed through a tanh activation function. The memory $c_j$ is then updated: the forget gate controls how much of the previous memory to keep ($c_{j-1} \odot f$), and the input gate controls how much of the proposed update to keep ($g \odot i$). The gating mechanisms allow for gradients related to the memory part $c_j$ to stay high across very long time ranges.
+
+When training LSTM networks, Jozefowicz et al (2015) strongly
+recommend to always initialize the bias term of the forget gate to be close to one. When
+applying dropout to an RNN with an LSTM, Zaremba et al (2014) found out that it is crucial to apply dropout only on the non-recurrent connection, i.e. only to apply it between
+layers and not between sequence positions. 
+
+For further discussion on the LSTM architecture see the PhD thesis by Alex Graves
+(2008), as well as Chris Olah's description. For an analysis of the behavior of an LSTM
+when used as a character-level language model, see (Karpathy et al., 2015).
+
+### GRU
+
+The LSTM architecture is very effective, but also quite complicated. The complexity of the
+system makes it hard to analyze, and also computationally expensive to work with. The
+gated recurrent unit (**GRU**) was recently introduced by Cho et al (2014b) as an alternative
+to the LSTM. It was subsequently shown by Chung et al (2014) to perform comparably to
+the LSTM on several (non textual) datasets.
+
+Like the LSTM, the GRU is also based on a gating mechanism, but with substantially fewer gates and without a separate memory component.
+
+
+$$
+\begin{equation}
+\begin{split}
+
+s_j = R(s_{j-1},x_j) &=(1-z) \odot s_{j-1} + z \odot h_{j} \\
+\\
+z &= \sigma(x_jW^{xz}+h_{j-1}W^{hz}) \\
+r &= \sigma(x_jW^{xr}+h_{j-1}W^{hr}) \\
+h_j &= \tanh(x_jW^{xh}+(h_{j-1} \odot r)W^{hg}) \\
+\\
+y_j = O(s_j) &= s_j
+\end{split}
+\end{equation}
+$$
+
+
+The updated state $s_j$ is determined based on an interpolation of the previous state $s_{j-1}$ and the proposal $h_j$, where the proportions of the interpolation are controlled using the gate $z$. The gate $r$ is used to control access to the previous state.
+
+The GRU was shown to be eective in language modeling and machine translation.
+However, the jury between the GRU, the LSTM and possible alternative RNN architectures
+is still out, and the subject is actively researched. For an empirical exploration of the GRU
+and the LSTM architectures, see (Jozefowicz et al., 2015).
+
+### Other Variants
+
+The gated architectures of the LSTM and the GRU help in alleviating the vanishing gradients
+problem of the Simple RNN, and allow these RNNs to capture dependencies that span
+long time ranges. Some researchers explore simpler architectures than the LSTM and the
+GRU for achieving similar benefits.
+
+Please see (Mikolov et al 2014) and (Le, Jaitly, & Hinton, 2015).
+
 
 
