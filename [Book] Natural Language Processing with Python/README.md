@@ -2734,6 +2734,246 @@ for doc in conll2002.chunked_sents('ned.train'):
 - Although chunkers are specialized to create relatively flat data structures, where no two chunks are allowed to overlap, they can be cascaded together to build nested structures.
 - Relation extraction can be performed using either rule-based systems which typically look for specific patterns in the text that connect entities and the intervening words; or using machine-learning systems which typically attempt to learn such patterns automatically from a training corpus.
 
+# Chapter 8: Analyzing Sentence Structure
+
+Earlier chapters focused on words: how to identify them, analyze their structure, assign them to lexical categories, and access their meanings. We have also seen how to identify patterns in word sequences or n-grams. However, these methods only scratch the surface of the complex constraints that govern sentences. We need a way to deal with the ambiguity that natural language is famous for. We also need to be able to cope with the fact that there are an unlimited number of possible sentences, and we can only write finite programs to analyze their structures and discover their meanings.
+
+The goal of this chapter is to answer the following questions:
+
+1. How can we use a formal grammar to describe the structure of an unlimited set of sentences?
+2. How do we represent the structure of sentences using syntax trees?
+3. How do parsers analyze a sentence and automatically build a syntax tree?
+
+## Some Grammatical Dilemmas 语法困境
+
+### Linguistic Data and Unlimited Possibilities 语言数据有无限可能性
+
+Previous chapters have shown you how to process and analyse text corpora, and we have stressed the challenges for NLP in dealing with the vast amount of electronic language data that is growing daily. Let's consider this data more closely, and make the thought experiment that we have a gigantic corpus consisting of everything that has been either uttered or written in English over, say, the last 50 years. Would we be justified in calling this corpus "the language of modern English"? There are a number of reasons why we might answer No. Accordingly, we can argue that the "modern English" is not equivalent to the very big set of word sequences in our imaginary corpus. Speakers of English can make judgements about these sequences, and will reject some of them as being ungrammatical.
+
+不管多么大的语料库，也无法表示一个语言的所有情况。
+
+Equally, it is easy to compose a new sentence and have speakers agree that it is perfectly good English. For example, sentences have an interesting property that they can be embedded inside larger sentences. language provides us with constructions which seem to allow us to extend sentences indefinitely. It is also striking that we can understand sentences of arbitrary length that we've never heard before: it's not hard to concoct an entirely novel sentence, one that has probably never been used before in the history of the language, yet all speakers of the language will understand it.
+
+同时，我们也总可以利用已经见过的语句来构造从未见过的语句，足见语言的丰富性。另一方面，也说明语言必然存在某种结构或语法。
+
+The purpose of a grammar is to give an explicit description of a language. But the way in which we think of a grammar is closely intertwined with what we consider to be a language. Is it a large but finite set of observed utterances and written texts? Is it something more abstract like the implicit knowledge that competent speakers have about grammatical sentences? Or is it some combination of the two? We won't take a stand on this issue, but instead will introduce the main approaches.
+
+语法可以用足够大的语料库表示吗？还是可以用我们丰富的语法知识来表示？还是对二者的结合呢？这里我们不考虑到底有哪种方式来表示语法，而是介绍一些主流的做法。
+
+In this chapter, we will adopt the formal framework of "**generative grammar**", in which a "**language**" is considered to be nothing more than an enormous collection of all grammatical sentences, and a grammar is a formal notation that can be used for "generating" the members of this set. Grammars use recursive **production rules** to automatically build up the meaning of a sentence out of the meanings of its parts.
+
+本章主要介绍一种形式化框架-生成语法。所谓生成语法，即定义了一系列递归的产生式规则，不断应用这些规则来生成的符号串就是该生成语法所定义的形式化语言。
+
+### Ubiquitous Ambiguity 无处不在的歧义
+
+A well-known example of ambiguity is shown as follows:
+
+> While hunting in Africa, I shot an elephant in my pajamas. How he got into my pajamas, I don't know.
+
+The prepositional phrase *in my pajamas* can be used to describe the elephant or the shooting event.
+
+We can build a context-free grammer to parse this sentence:
+
+```python
+# build context-free grammer
+groucho_grammar = nltk.CFG.fromstring("""
+S -> NP VP
+PP -> P NP
+NP -> Det N | Det N PP | 'I'
+VP -> V NP | VP PP
+Det -> 'an' | 'my'
+N -> 'elephant' | 'pajamas'
+V -> 'shot'
+P -> 'in'
+""")
+
+sent = ['I', 'shot', 'an', 'elephant', 'in', 'my', 'pajamas']
+parser = nltk.ChartParser(groucho_grammar)
+for tree in parser.parse(sent):
+	print(tree)
+```
+
+There are two syntactic parsing trees (ambiguity) for the above sentence:
+
+![](ch08-tree-1.png)
+
+![](ch08-tree-2.png)
+
+As we said, the prepositional phrase *in my pajamas* can be used to describe the elephant or the shooting event.
+
+This chapter presents grammars and parsing, as the formal and computational methods for investigating and modeling the linguistic phenomena we have been discussing. As we shall see, patterns of well-formedness and ill-formedness in a sequence of words can be understood with respect to the phrase structure and dependencies. We can develop formal models of these structures using grammars and parsers. As before, a key motivation is natural language *understanding*. How much more of the meaning of a text can we access when we can reliably recognize the linguistic structures it contains? Having read in a text, can a program "understand" it enough to be able to answer simple questions about "what happened" or "who did what to whom"?
+
+## What's the Use of Syntax?
+
+### Beyond n-grams
+
+We have know how to use the frequency information in bigrams to generate text that seems perfectly acceptable for small sequences of words but rapidly degenerates into nonsense. You intuitively know that these sequences are "word-salad", but you probably find it hard to pin down what's wrong with them. One benefit of studying grammar is that it provides a conceptual framework and vocabulary for spelling out these intuitions. 
+
+利用 N 元语法生成的语句，直观来看是有问题的，可是我们又说不清楚到底问题出在哪里。我们可以利用语法的概念来准确描述这些出现的问题。
+
+Let's take a closer look at the sequence “*the worst part and clumsy looking*”. This looks like a **coordinate structure**, where two phrases are joined by a coordinating conjunction such as “and”, “but” or “or”. 
+
+The informal definition of Coordinate Structure: If *v*1 and *v*2 are both phrases of grammatical category *X*, then ""*v*1 and *v*2" is also a phrase of category *X*.
+
+For example:
+
+Two `NP`s (noun phrases) have been conjoined to make an `NP`
+
+> The book's ending was (NP *the worst part and the best part*) for me.
+
+Two `AP`s (adjective phrases) have been conjoined to make an `AP`
+
+> On land they are (AP *slow and clumsy looking*).
+
+What we can't do is conjoin an `NP` and an `AP`, which is why "the worst part and clumsy looking" is ungrammatical.
+
+分析 "the worst part and clumsy looking" 是否合乎语法。
+
+**Constituent structure** is based on the observation that words combine with other words to form units. The evidence that a sequence of words forms such a unit is given by substitutability — that is, a sequence of words in a well-formed sentence can be replaced by a shorter sequence without rendering the sentence ill-formed. To clarify this idea, consider the following sentence:
+
+> The little bear saw the fine fat trout in the brook.
+
+The fact that we can substitute "He" for "The little bear" indicates that the latter sequence is a unit.
+
+成分结构，是若干单词的组合，被认为是语句中成分单元，可以被替换，如例句中的 "The litter bear" 就是成分结构，可以被替换为 "He"。
+
+We systematically substitute longer sequences by shorter ones in a way which preserves grammaticality. Each sequence that forms a unit can in fact be replaced by a single word, and we end up with just two elements.
+
+我们可以利用这个替换的思路不断的对以上例句中的成分进行替换，最终得到：
+
+![](ch08-constituent-replace-diagram.png)
+
+为上图添加语法类别后（NP 是名词短语，VP 是动词短语，PP 是介词短语）：
+
+![](ch08-constituent-replace-diagram-label.png)
+
+这个过程其实对应了一个成分树结构（Each node in this tree (including the words) is called a constituent. The immediate constituents of `S` are `NP` and `VP`.）：
+
+![](ch08-constituent-tree-example.png)
+
+可见 N 元语法只是将语言当成一个序列来看待，而形式语法则将语言当成一个层级结构来看待，这是两个不同的方法论。N 元语法是一种描述语言的简化模型，不能够表示语言的真实结构也正常，不过基于语法的层级结构真的可以表示语言的内在结构吗？基于语义的层级结构呢？
+
+## Context Free Grammar
+
+### A Simple Grammar 定义一个简单的形式语法
+
+Let's start off by looking at a simple context-free grammar. By convention, the left-hand-side of the first production is the start-symbol of the grammar, typically `S`, and all well-formed trees must have this symbol as their root label. In NLTK, context-free grammars are defined in the `nltk.grammar` module.
+
+```python
+# 语法有一系列产生式规则来指定
+grammar1 = nltk.CFG.fromstring("""
+  S -> NP VP
+  VP -> V NP | V NP PP
+  PP -> P NP
+  V -> "saw" | "ate" | "walked"
+  NP -> "John" | "Mary" | "Bob" | Det N | Det N PP
+  Det -> "a" | "an" | "the" | "my"
+  N -> "man" | "dog" | "cat" | "telescope" | "park"
+  P -> "in" | "on" | "by" | "with"
+  """)
+  
+sent = "Mary saw Bob".split()
+rd_parser = nltk.RecursiveDescentParser(grammar1)
+for tree in rd_parser.parse(sent):
+	print(tree)
+```
+
+上面语法中各个符号的含义：S 表示整个语句；VP 表示动词短语；PP 表示介词短语；NP 表示名词短语；V 表示动词；Det 表示冠词；N 表示名词；P 表示介词；
+
+Since our grammar licenses two trees for this sentence, the sentence is said to be structurally ambiguous. The ambiguity in question is called a prepositional phrase attachment ambiguity.
+
+上面代码定义的语法解析语句 "The dog saw a man in the park" 将得到两个句法解析树，这就是结构歧义问题。
+
+![](ch08-tree-3.png)
+
+![](ch08-tree-4.png)
+
+歧义来自于介词短语 "in the park" 到底是修饰狗还是人。
+
+### Writing Your Own Grammars 编辑自己的形式语法
+
+If you are interested in experimenting with writing CFGs, you will find it helpful to create and edit your grammar in a text file, say `mygrammar.cfg`. You can then load it into NLTK and parse with it as follows:
+
+```
+grammar1 = nltk.data.load('file:mygrammar.cfg')
+rd_parser = nltk.RecursiveDescentParser(grammar1)
+```
+
+Make sure that you put a `.cfg` suffix on the filename, and that there are no spaces in the string `'file:mygrammar.cfg'`.
+
+When you write CFGs for parsing in NLTK, you cannot combine grammatical categories with lexical items on the righthand side of the same production. Thus, a production such as `PP -> 'of' NP` is disallowed. In addition, you are not permitted to place multi-word lexical items on the righthand side of a production. So rather than writing `NP -> 'New
+York'`, you have to resort to something like `NP -> 'New_York'` instead.
+
+### Recursion in Syntactic Structure 递归句法结构
+
+A grammar is said to be recursive if a category occurring on the left hand side of a production also appears on the righthand side of a production. For example:
+
+```
+grammar2 = nltk.CFG.fromstring("""
+  S  -> NP VP
+  NP -> Det Nom | PropN
+  Nom -> Adj Nom | N
+  VP -> V Adj | V NP | V S | V NP PP
+  PP -> P NP
+  PropN -> 'Buster' | 'Chatterer' | 'Joe'
+  Det -> 'the' | 'a'
+  N -> 'bear' | 'squirrel' | 'tree' | 'fish' | 'log'
+  Adj  -> 'angry' | 'frightened' |  'little' | 'tall'
+  V ->  'chased'  | 'saw' | 'said' | 'thought' | 'was' | 'put'
+  P -> 'on'
+  """)
+```
+
+其中 S 可以生成 VP，而 VP 又可以生成 S，因此构成递归。
+
+## Parsing With Context Free Grammar
+
+A parser processes input sentences according to the productions of a grammar, and builds one or more constituent structures that conform to the grammar. A grammar is a declarative specification of well-formedness — it is actually just a string, not a program. *A parser is a procedural interpretation of the grammar. It searches through the space of trees licensed by a grammar to find one that has the required sentence along its fringe*.
+
+A parser permits a grammar to be evaluated against a collection of test sentences, helping linguists to discover mistakes in their grammatical analysis. A parser can serve as a model of psycholinguistic processing, helping to explain the difficulties that humans have with processing certain syntactic constructions. Many natural language applications involve parsing at some point; for example, we would expect the natural language questions submitted to a question-answering system to undergo parsing as an initial step.
+
+In this section we see two simple parsing algorithms, a top-down method called **recursive descent parsing**, and a bottom-up method called **shift-reduce parsing**. We also see some more sophisticated algorithms, a top-down method with bottom-up filtering called **left-corner parsing**, and a dynamic programming technique called **chart parsing**.
+
+### Recursive Descent Parsing
+
+The simplest kind of parser interprets a grammar as a specification of how to break a high-level goal into several lower-level subgoals. The top-level goal is to find an `S`. The `S`→ `NP VP` production permits the parser to replace this goal with two subgoals: find an `NP`, then find a `VP`. Each of these subgoals can be replaced in turn by sub-sub-goals, using productions that have `NP` and `VP` on their left-hand side. Eventually, this expansion process leads to subgoals such as: find the word telescope. Such subgoals can be directly compared against the input sequence, and succeed if the next word is matched. If there is no match the parser must back up and try a different alternative.
+
+The recursive descent parser builds a parse tree during the above process. With the initial goal (find an `S`), the `S` root node is created. As the above process recursively expands its goals using the productions of the grammar, the parse tree is extended downwards (hence the name *recursive descent*). We can see this in action using the graphical demonstration `nltk.app.rdparser()`.  Six stages of the execution of this parser:
+
+![](rdparser-6-stages.png)
+
+During this process, the parser is often forced to choose between several possible productions. For example, in going from step 3 to step 4, it tries to find productions with `N`on the left-hand side. The first of these is `N` → man. When this does not work it backtracks, and tries other `N` productions in order, until it gets to `N` → dog, which matches the next word in the input sentence. Much later, as shown in step 5, it finds a complete parse. This is a tree that covers the entire sentence, without any dangling edges. Once a parse has been found, we can get the parser to look for additional parses. Again it will backtrack and explore other choices of production in case any of them result in a parse.
+
+简单来说递归下降解析器工作过程如下：以 S 开始，使用语法中的产生式规则进行左手（left-hand side）扩展替换，如将 S 替换为 NP + VP，然后继续对这些非终止符进行替换，不断递归直到出现终止符（即单词），然后跟目标语句中待处理的单词对比，如果匹配则返回继续处理，否则不断寻找产生式或失败。相应的句法分析树是不断经过递归并以下降的方式产生的，所以叫做递归下降。
+
+NLTK provides a recursive descent parser:
+
+```
+rd_parser = nltk.RecursiveDescentParser(grammar1)
+```
+
+递归下降解析器的缺点：
+
+* First, left-recursive productions like `NP -> NP PP` send it into an infinite loop.
+* Second, the parser wastes a lot of time considering words and structures that do not correspond to the input sentence. 
+* Third, the backtracking process may discard parsed constituents that will need to be rebuilt again later. For example, backtracking over `VP -> V NP` will discard the subtree created for the `NP`. If the parser then proceeds with `VP -> V NP PP`, then the `NP` subtree must be created all over again.
+
+Recursive descent parsing is a kind of **top-down parsing**. Top-down parsers use a grammar to *predict* what the input will be, before inspecting the input! However, since the input is available to the parser all along, it would be more sensible to consider the input sentence from the very beginning. This approach is called **bottom-up parsing**.
+
+### Shift-Reduce Parsing
+
+A simple kind of bottom-up parser is the shift-reduce parser. In common with all bottom-up parsers, a shift-reduce parser tries to find sequences of words and phrases that correspond to the *right hand* side of a grammar production, and replace them with the left-hand side, until the whole sentence is reduced to an `S`.
+
+自底向上解析器，以输入语句为起点，不断应用语法产生规则进行右手（right-hand side）替换，直到变为 S 节点则停止。
+
+
+
+
+
+
+
+
+
 
 
 # Examples
