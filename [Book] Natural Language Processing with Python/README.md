@@ -2010,23 +2010,27 @@ A second, and equally important, advantage of using cross-validation is that it 
 In the next three sections, we'll take a closer look at three machine learning methods that can be used to automatically build classification models: decision trees, naive Bayes classifiers, and Maximum Entropy classifiers. As we've seen, it's possible to treat these learning methods as black boxes, simply training models and using them for prediction without understanding how they work. But there's a lot to be learned from taking a closer look at how these learning methods select models based on the data in a training set. An understanding of these methods can help guide our selection of appropriate features, and especially our decisions about how those features should be encoded. And an understanding of the generated models can allow us to extract information about which features are most informative, and how those features relate to one another.
 
 ### Decision Tree
-#### 决策树结构以及使用它进行预测
-
-A decision tree is a simple flowchart that selects labels for input values. This flowchart consists of **decision nodes**, which check feature values, and **leaf nodes**, which assign labels. To choose the label for an input value, we begin at the flowchart's initial decision node, known as its root node. This node contains a condition that checks one of the input value's features, and selects a branch based on that feature's value. Following the branch that describes our input value, we arrive at a new decision node, with a new condition on the input value's features. We continue following the branch selected by each node's condition, until we arrive at a leaf node which provides a label for the input value.
+A decision tree is a simple flowchart that selects labels for input values. This flowchart consists of **decision nodes**, which check feature values, and **leaf nodes**, which assign labels. To choose the label for an input value, we begin at the flowchart's initial decision node, known as its **root node**. This node contains a condition that checks one of the input value's features, and selects a branch based on that feature's value. Following the branch that describes our input value, we arrive at a new decision node, with a new condition on the input value's features. We continue following the branch selected by each node's condition, until we arrive at a leaf node which provides a label for the input value.
 
 决策树为input指定label，决策树中含有决策节点和叶节点，叶节点中包含label，决策节点包含测试条件，对input的某个feature进行测试，然后根据测试结果选取树分支，然后继续在分支树上进行测试，直到到达叶节点后，输出相应label作为input的label。
 
-#### 如何训练决策树
+#### How to train decision tree
 
-But before we look at the learning algorithm for building decision trees, we'll consider a simpler task: picking the best "decision stump" for a corpus. A decision stump is a decision tree with a single node that decides how to classify inputs based on a single feature. It contains one leaf for each possible feature value, specifying the class label that should be assigned to inputs whose features have that value. In order to build a decision stump, we must first decide which feature should be used. The simplest method is to just build a decision stump for each possible feature, and see which one achieves the highest accuracy on the training data, although there are other alternatives that we will discuss below. Once we've picked a feature, we can build the decision stump by assigning a label to each leaf based on the most frequent label for the selected examples in the training set (i.e., the examples where the selected feature has that value).
+Once we have a decision tree, it is straightforward to use it to assign labels to new input values. What's less straightforward is how we can build a decision tree that models a given training set. But before we look at the learning algorithm for building decision trees, we'll consider a simpler task: picking the best "**decision stump**" for a corpus. A decision stump is a decision tree with a single node that decides how to classify inputs based on a single feature. It contains one leaf for each possible feature value, specifying the class label that should be assigned to inputs whose features have that value. In order to build a decision stump, we must first decide which feature should be used. The simplest method is to just build a decision stump for each possible feature, and see which one achieves the highest accuracy on the training data, although there are other alternatives that we will discuss below. Once we've picked a feature, we can build the decision stump by assigning a label to each leaf based on the most frequent label for the selected examples in the training set (i.e., the examples where the selected feature has that value). Given the algorithm for choosing decision stumps, the algorithm for growing larger decision trees is straightforward. We begin by selecting the overall best decision stump for the classification task. We then check the accuracy of each of the leaves on the training set. Leaves that do not achieve sufficient accuracy are then replaced by new decision stumps, trained on the subset of the training corpus that is selected by the path to the leaf.
 
 根据训练集构建决策树，先让我们看个简单情形，仅含有一个决策节点（包含一个feature的测试）以及若干叶节点（每个节点对应一个可能的feature value的情况，也对应一个label）。首先需要考虑的问题是，应该选取哪个feature用来决策测试，简单粗暴的方法是，依次选取所有features，观察选取哪个feature时，在训练集上的准确率最高，即将该feature作为决策条件，然后每个feature value对应一个叶节点，此叶节点的label由属于该叶节点的所有样本中最高频的那个label决定。
 
 然后不断递归的应用上述算法就可以构建基于整个训练集的决策树，先选取最佳feature构建根节点以及叶节点，然后评估叶节点分类结果的准确率，如果准确率难以接受，则基于父节点分类传递下来的样本集为基础继续构建决策树，直到所有叶节点分类结果准确率都可接受。接下来我们会介绍更为数学严谨的决策树构建方法。
 
-#### 利用信息增益准则构建决策树
+#### Build decision tree by information gain
 
-Information Gain，利用信息增量来选取决策feature，即用来度量根据给定feature对输入集分类后使得数据集更加organized。可以使用基于labels的熵来度量数据集的disorganized程度，大致来说当数据集对应的label较多时，熵较大，当数据集对应的label较少时，熵较小，更进一步根据熵的定义公式可知，当某个label的概率很小或者很大时都对熵值的贡献不大，对熵值起决定性作用的是那些概率大小中等的lable。下面我们将Inforamtion Gain和Entropy应用于决策树构建过程，首先计算原始数据集labels的熵，在选取feature划分数据集后为叶节点计算熵，然后对叶节点熵值进行加权平均（权重为落在叶节点中的样本点数量），用原始数据集labels的熵减去叶节点加权平均熵等于信息增量（也即熵减量），显然信息增量越高则说明对数据集的划分越好，因此在选取feature时可以将使得信息增量最大为依据
+As was mentioned before, there are several methods for identifying the most informative feature for a decision stump. One popular alternative, called **information gain**, measures how much more organized the input values become when we divide them up using a given feature. 
+
+To measure how disorganized the original set of input values are, we calculate **entropy** of their labels, which will be high if the input values have highly varied labels, and low if many input values all have the same label.
+
+Once we have calculated the entropy of the original set of input values' labels, we can determine how much more organized the labels become once we apply the decision stump. To do so, we calculate the entropy for each of the decision stump's leaves, and take the average of those leaf entropy values (weighted by the number of samples in each leaf). The **information gain** is then equal to the original entropy minus this new, reduced entropy. The higher the information gain, the better job the decision stump does of dividing the input values into coherent groups, so we can build decision trees by selecting the decision stumps with the highest information gain.
+
+Information Gain，利用信息增量来选取决策feature，即用来度量根据给定feature对输入集分类后使得数据集更加organized。可以使用基于labels的熵来度量数据集的disorganized程度，大致来说当数据集对应的label较多时，熵较大，当数据集对应的label较少时，熵较小，更进一步根据熵的定义公式可知，当某个label的概率很小或者很大时都对熵值的贡献不大，对熵值起决定性作用的是那些概率大小中等的lable。下面我们将Inforamtion Gain和Entropy应用于决策树构建过程，首先计算原始数据集labels的熵，在选取feature划分数据集后为叶节点计算熵，然后对叶节点熵值进行加权平均（权重为落在叶节点中的样本点数量），用原始数据集labels的熵减去叶节点加权平均熵等于信息增量（也即熵减量），显然信息增量越高则说明对数据集的划分越好，因此在选取feature时可以将使得信息增量最大为依据。
 
 熵的计算：
 
@@ -2036,19 +2040,43 @@ Information Gain，利用信息增量来选取决策feature，即用来度量根
 		probs = [freqdist.freq(l) for l in freqdist]
 		return -sum(p * math.log(p,2) for p in probs)
 
+#### The efficiency of building
+
 Another consideration for decision trees is **efficiency**. The simple algorithm for selecting decision stumps described above must construct a candidate decision stump for every possible feature, and this process must be repeated for every node in the constructed decision tree. A number of algorithms have been developed to cut down on the training time by storing and reusing information about previously evaluated examples.
 
-Decision trees have a number of useful qualities. To begin with, they're simple to understand, and easy to interpret. This is especially true near the top of the decision tree, where it is usually possible for the learning algorithm to find very useful features. However, decision trees also have a few disadvantages. One problem is that, since each branch in the decision tree splits the training data, the amount of training data available to train nodes lower in the tree can become quite small. As a result, these lower decision nodes may overfit the training set, learning patterns that reflect idiosyncrasies of the training set rather than linguistically significant patterns in the underlying problem. One solution to this problem is to stop dividing nodes once the amount of training data becomes too small. Another solution is to grow a full decision tree, but then to prune decision nodes that do not improve performance on a dev-test. A second problem with decision trees is that they force features to be checked in a specific order, even when features may act relatively independently of one another. For example, when classifying documents into topics (such as sports, automotive, or murder mystery), features such as hasword(football) are highly indicative of a specific label, regardless of what other the feature values are. Since there is limited space near the top of the decision tree, most of these features will need to be repeated on many different branches in the tree. And since the number of branches increases exponentially as we go down the tree, the amount of repetition can be very large.
+#### Advantages and disadvantages
+
+Decision trees have a number of useful qualities. To begin with, they're simple to understand, and easy to interpret. This is especially true near the top of the decision tree, where it is usually possible for the learning algorithm to find very useful features. 
+
+However, decision trees also have a few disadvantages. One problem is that, since each branch in the decision tree splits the training data, the amount of training data available to train nodes lower in the tree can become quite small. As a result, these lower decision nodes may overfit the training set, learning patterns that reflect idiosyncrasies of the training set rather than linguistically significant patterns in the underlying problem. One solution to this problem is to stop dividing nodes once the amount of training data becomes too small. Another solution is to grow a full decision tree, but then to prune decision nodes that do not improve performance on a dev-test. 
+
+A second problem with decision trees is that they force features to be checked in a specific order, even when features may act relatively independently of one another. For example, when classifying documents into topics (such as sports, automotive, or murder mystery), features such as hasword(football) are highly indicative of a specific label, regardless of what other the feature values are. Since there is limited space near the top of the decision tree, most of these features will need to be repeated on many different branches in the tree. And since the number of branches increases exponentially as we go down the tree, the amount of repetition can be very large.
 
 A related problem is that decision trees are not good at making use of features that are weak predictors of the correct label. Since these features make relatively small incremental improvements, they tend to occur very low in the decision tree. But by the time the decision tree learner has descended far enough to use these features, there is not enough training data left to reliably determine what effect they should have. If we could instead look at the effect of these features across the entire training set, then we might be able to make some conclusions about how they should affect the choice of label.
 
-决策树有很多优良的性质，特别是它很好的体现数据集的特征，它在层次分类数据集上有巨大的优势，但同时决策树也有一些缺点，由于每个决策节点将数据集划分为更小的数据集，越往下在数据集越小，这样会出现过拟合的情况，为了躲避这个弊端，可以在数据集太小时停止决策树构建，或者在后续测试决策树时去掉过拟合的部分，决策树的另外一个问题是检测的特征必须按照决策树自顶向下的顺序进行，并且往往这些特征之间并没有关联性
+决策树有很多优良的性质，特别是它很好的体现数据集的特征，它在层次分类数据集上有巨大的优势，但同时决策树也有一些缺点，由于每个决策节点将数据集划分为更小的数据集，越往下在数据集越小，这样会出现过拟合的情况，为了躲避这个弊端，可以在数据集太小时停止决策树构建，或者在后续测试决策树时去掉过拟合的部分，决策树的另外一个问题是检测的特征必须按照决策树自顶向下的顺序进行，并且往往这些特征之间并没有关联性。
+
+The fact that decision trees require that features be checked in a specific order limits their ability to exploit features that are relatively independent of one another. The naive Bayes classification method, which we'll discuss next, overcomes this limitation by allowing all features to act "in parallel."
 
 ### Naive Bayes Classifier
 
+In naive Bayes classifiers, every feature gets a say in determining which label should be assigned to a given input value. To choose a label for an input value, the naive Bayes classifier begins by calculating the prior probability of each label, which is determined by checking frequency of each label in the training set. The contribution from each feature is then combined with this prior probability, to arrive at a likelihood estimate for each label. The label whose likelihood estimate is the highest is then assigned to the input value. 
+
+Individual features make their contribution to the overall decision by "voting against" labels that don't occur with that feature very often. In particular, the likelihood score for each label is reduced by multiplying it by the probability that an input value with that label would have the feature.
+
 朴素贝叶斯分类器大致思路是：在给某个input打label时，input对应的每个feature都对打label有一定影响，这样会得到每个label的评分，选其中最高的评分作为input的label。显然需要事先根据训练集计算好先验概率，P(feature|label)以及P(label)。对某个label打分公式如下：P(feature1|label)P(feature2|label)...P(label)，其实可以将打分公式看成减小可能性的过程，假设一开始input对应label，即可能性为P(label)，然后每从input获得信息feature后，乘以P(feature|label)，降低了可能性，因此选label的过程就是，根据input提供的信息features来降低各个可选label可能性的过程，最后可能性最高的label被作为input的label（既考虑了P(label)越大则越有可能赋给input，又考虑了feature可能性越低则越可能赋给input）
 
-朴素贝叶斯分类器基于一个假设：每个feature之间是相互独立的，这样计算各个feature对打label的贡献时就不需要考虑各个feature之间的相互影响，将问题简化了，当然现实问题中feature之间往往是相关联的
+#### Probabilistic graph model
+
+Another way of understanding the naive Bayes classifier is that it chooses the most likely label for an input, under the assumption that every input value is generated by first choosing a class label for that input value, and then generating each feature, entirely independent of every other feature. Of course, this assumption is unrealistic; features are often highly dependent on one another. We'll return to some of the consequences of this assumption at the end of this section. This simplifying assumption, known as thenaive Bayes assumption (or independence assumption) makes it much easier to combine the contributions of the different features, since we don't need to worry about how they should interact with one another.
+
+可以从数据生成的角度来看朴素贝叶斯分类器，首先采样一个 label，然后再利用这个 label 分别采样各个 feature，采样各个 feature 时互不影响。朴素贝叶斯分类器基于一个假设：每个feature之间是相互独立的，这样计算各个feature对打label的贡献时就不需要考虑各个feature之间的相互影响，将问题简化了，当然现实问题中feature之间往往是相关联的。
+
+The probabilistic graph model for naive bayes classifier:
+
+![](naive_bayes_graph.png)
+
+#### Train naive bayes classifier
 
 朴素贝叶斯分类器概率公式推导：
 
@@ -2074,18 +2102,101 @@ A related problem is that decision trees are not good at making use of features 
 
 6. 从上式可以看出求最可能label的实质就是，根据训练集计算先验概率P(label)，然后乘以每个featrue对该label的可能性贡献P(feature|label)
 
+#### Zero Counts and Smoothing
 
-数据平滑技术，因为训练集有限常常出现count(feature, label)等于0的情况，也即某个feature对label的贡献为0，利用上面的公式计算label的可能性结果也为0，即当某个feature对label的贡献在训练集中不可见时，忽略了其它feature对label的贡献。更加形式化的描述：当count(feature, label)较大时，count(feature, label)/count(label)是对P(feature|label)较好的估算方法；当count(feature, label)较小时，count(feature, label)/count(label)对P(feature|label)则不再是好的估算方案，为此需要使用统计中的数据平滑技术来计算P(feature|label)，例如Expected Likelihood Estimation技术，通过为所有feature的count(feature, label)都增加一个数值来消除这个问题
+The simplest way to calculate P(f|label), the contribution of a feature f toward the label likelihood for a label label, is to take the percentage of training instances with the given label that also have the given feature: P(f|label) = count(f, label) / count(label). The basic problem here is with our calculation of P(f|label), the probability that an input will have a feature, given a label. In particular, just because we haven't seen a feature/label combination occur in the training set, doesn't mean it's impossible for that combination to occur.
 
-特征值的二值化，有的feature可能有多个离散取值，有的特征值可能有一个连续取值范围，都可以将其转换为二值范围，比如多个离散值的二值形式是：是不是等于某个离散值，连续范围则可以通过binning来将取值转换到区间中，此外连续值也可以使用分布函数来估算其可能性
+计算概率 P(f|label) = count(f, label) / count(label) 时，如果 count(f, label) 为零怎么办？没有在训练集中看到的事件，并不意味着它绝对不会发生。所以我们需要某种手段来为看不见的事件估计概率。
 
-忽略特征相互独立的影响，在现实问题中如果想要构造完全相互独立且富含信息的特征集是很难的，因此特征集往往是相关联的，分类器会对关联特征产生double-counting效果，使得分类结果更加趋向关联特征对应的label，导致double-counting的实质是在根据训练集计算P(feature|label)时，不同feature是独立计算的，但是在估算P(features, label)时却结合了每个feature的贡献，也即在估算P(features, label)时没有考虑feature之间的相关性
+Thus, although count(f,label)/count(label) is a good estimate for P(f|label) when count(f, label) is relatively high, this estimate becomes less reliable when count(f,label) becomes smaller. Therefore, when building naive Bayes models, we usually employ more sophisticated techniques, known as smoothing techniques, for calculating P(f|label), the probability of a feature given a label.
+
+数据平滑技术，因为训练集有限常常出现count(feature, label)等于0的情况，也即某个feature对label的贡献为0，利用上面的公式计算label的可能性结果也为0，即当某个feature对label的贡献在训练集中不可见时，忽略了其它feature对label的贡献。更加形式化的描述：当count(feature, label)较大时，count(feature, label)/count(label)是对P(feature|label)较好的估算方法；当count(feature, label)较小时，count(feature, label)/count(label)对P(feature|label)则不再是好的估算方案，为此需要使用统计中的数据平滑技术来计算P(feature|label)，例如Expected Likelihood Estimation技术，通过为所有feature的count(feature, label)都增加一个数值来消除这个问题。
+
+#### Non-Binary Features
+
+We have assumed here that each feature is binary, i.e. that each input either has a feature or does not. Label-valued features (e.g., a color feature which could be red, green, blue, white, or orange) can be converted to binary features by replacing them with binary features such as "color-is-red". Numeric features can be converted to binary features by binning, which replaces them with features such as "4<x<6".
+
+我们这里假设了特征值是二元的，即特征在或不在输入中。有的feature可能有多个离散取值，有的特征值可能有一个连续取值范围，都可以将其转换为二值范围，比如多个离散值的二值形式是：是不是等于某个离散值，连续范围则可以通过binning来将取值转换到区间中，此外连续值也可以使用分布函数来估算其可能性。
+
+#### Naive bayes assumption
+
+The reason that naive Bayes classifiers are called "naive" is that it's unreasonable to assume that all features are independent of one another (given the label). In particular, almost all real-world problems contain features with varying degrees of dependence on one another. If we had to avoid any features that were dependent on one another, it would be very difficult to construct good feature sets that provide the required information to the machine learning algorithm.
+
+So what happens when we ignore the independence assumption, and use the naive Bayes classifier with features that are not independent? One problem that arises is that the classifier can end up "double-counting" the effect of highly correlated features, pushing the classifier closer to a given label than is justified.
+
+忽略特征相互独立的影响，在现实问题中如果想要构造完全相互独立且富含信息的特征集是很难的，因此特征集往往是相关联的，分类器会对关联特征产生double-counting效果（即相关特征会被重复计数），使得分类结果更加趋向关联特征对应的label，导致double-counting的实质是在根据训练集计算P(feature|label)时，不同feature是独立计算的，但是在估算P(features, label)时却结合了每个feature的贡献，相关的特征多次参与贡献，但它们本质上代表的是同一类特征，因此导致分类器产生偏差。
+
+The reason for the double-counting problem is that during training, feature contributions are computed separately; but when using the classifier to choose labels for new inputs, those feature contributions are combined. One solution, therefore, is to consider the possible interactions between feature contributions during training. We could then use those interactions to adjust the contributions that individual features make.
+
+一种解决方法是在训练时就考虑到特征之间的相关性，并在计算P(features,label)结合这些信息。
 
 ### Maximum Entropy Classifier
 
+The Maximum Entropy classifier uses a model that is very similar to the model employed by the naive Bayes classifier. But rather than using probabilities to set the model's parameters, it uses search techniques to find a set of parameters that will maximize the performance of the classifier. In particular, it looks for the set of parameters that maximizes the total likelihood of the training corpus.
+
+Because of the potentially complex interactions between the effects of related features, there is no way to directly calculate the model parameters that maximize the likelihood of the training set. Therefore, Maximum Entropy classifiers choose the model parameters using iterative optimization techniques, which initialize the model's parameters to random values, and then repeatedly refine those parameters to bring them closer to the optimal solution. These iterative optimization techniques guarantee that each refinement of the parameters will bring them closer to the optimal values, but do not necessarily provide a means of determining when those optimal values have been reached. Because the parameters for Maximum Entropy classifiers are selected using iterative optimization techniques, they can take a long time to learn. This is especially true when the size of the training set, the number of features, and the number of labels are all large.
+
+Some iterative optimization techniques are much faster than others. When training Maximum Entropy models, avoid the use of Generalized Iterative Scaling (GIS) or Improved Iterative Scaling (IIS), which are both considerably slower than the Conjugate Gradient (CG) and the BFGS optimization methods.
+
+#### The Maximum Entropy Model
+
+The Maximum Entropy classifier model is a generalization of the model used by the naive Bayes classifier. Like the naive Bayes model, the Maximum Entropy classifier calculates the likelihood of each label for a given input value by multiplying together the parameters that are applicable for the input value and label. The naive Bayes classifier model defines a parameter for each label, specifying its prior probability, and a parameter for each (feature, label) pair, specifying the contribution of individual features towards a label's likelihood.
+
+In contrast, the Maximum Entropy classifier model leaves it up to the user to decide what combinations of labels and features should receive their own parameters. In particular, it is possible to use a single parameter to associate a feature with more than one label; or to associate more than one feature with a given label. This will sometimes allow the model to "generalize" over some of the differences between related labels or features.
+
+Each combination of labels and features that receives its own parameter is called a joint-feature. Note that joint-features are properties of *labeled* values, whereas (simple) features are properties of *unlabeled* values.
+
+#### Maximizing Entropy
+
+The intuition that motivates Maximum Entropy classification is that we should build a model that captures the frequencies of individual joint-features, without making any unwarranted assumptions. 
+
+**Determine the word sense without any information**
+
+Suppose we are assigned the task of picking the correct word sense for a given word, from a list of ten possible senses (labeled A-J). At first, we are not told anything more about the word or the senses. There are many probability distributions that we could choose for the ten senses, such as:
+
+```
+	A	B	C	D	E	F	G	H	I	J
+(i)	10%	10%	10%	10%	10%	10%	10%	10%	10%	10%
+(ii) 5%	15%	0%	30%	0%	8%	12%	0%	6%	24%
+(iii)0%	100% 0%	 0%	0%	0%	0%	0%	0%	0%
+```
+
+Although any of these distributions *might* be correct, we are likely to choose distribution (i), because without any more information, there is no reason to believe that any word sense is more likely than any other. On the other hand, distributions (ii) and (iii) reflect assumptions that are not supported by what we know.
+
+One way to capture this intuition that distribution (i) is more "fair" than the other two is to invoke the concept of entropy. In our example, we chose distribution (i) because its label probabilities are evenly distributed — in other words, because its entropy is high. In general, the Maximum Entropy principle states that, among the distributions that are consistent with what we know, we should choose the distribution whose entropy is highest.
+
+**Introduce new piece of information**
+
+Next, suppose that we are told that sense A appears 55% of the time. Once again, there are many distributions that are consistent with this new piece of information, such as:
+
+```
+	A	B	C	D	E	F	G	H	I	J
+(iv)55%	45%	0%	0%	0%	0%	0%	0%	0%	0%
+(v)	55%	5%	5%	5%	5%	5%	5%	5%	5%	5%
+(vi)55%	3%	1%	2%	9%	5%	0%	25%	0%	0%
+```
+
+But again, we will likely choose the distribution that makes the fewest unwarranted assumptions — in this case, distribution (v).
+
+Throughout this example, we have restricted ourselves to distributions that are consistent with what we know; among these, we chose the distribution with the highest entropy. This is exactly what the Maximum Entropy classifier does as well. In particular, for each joint-feature, the Maximum Entropy model calculates the "empirical frequency" of that feature — i.e., the frequency with which it occurs in the training set. It then searches for the distribution which maximizes entropy, while still predicting the correct frequency for each joint-feature.
+
+#### Generative vs Conditional Classifiers
+
+An important difference between the naive Bayes classifier and the Maximum Entropy classifier concerns the type of questions they can be used to answer. The naive Bayes classifier is an example of a generative classifier, which builds a model that predicts P(input, label), the joint probability of a (input, label) pair. As a result, generative models can be used to answer the following questions:
+
+What is the most likely label for a given input?How likely is a given label for a given input?What is the most likely input value?How likely is a given input value?How likely is a given input value with a given label?What is the most likely label for an input that might have one of two values (but we don't know which)?
+
+The Maximum Entropy classifier, on the other hand, is an example of a conditional classifier. Conditional classifiers build models that predict P(label|input) — the probability of a label *given* the input value. Thus, conditional models can still be used to answer questions 1 and 2. However, conditional models can *not* be used to answer the remaining questions 3-6.
+
+In general, generative models are strictly more powerful than conditional models, since we can calculate the conditional probability P(label|input) from the joint probability P(input, label), but not vice versa. However, this additional power comes at a price. Because the model is more powerful, it has more "free parameters" which need to be learned. However, the size of the training set is fixed. Thus, when using a more powerful model, we end up with less data that can be used to train each parameter's value, making it harder to find the best parameter values. As a result, a generative model may not do as good a job at answering questions 1 and 2 as a conditional model, since the conditional model can focus its efforts on those two questions. However, if we do need answers to questions like 3-6, then we have no choice but to use a generative model.
+
+The difference between a generative model and a conditional model is analogous to the difference between a topographical map and a picture of a skyline. Although the topographical map can be used to answer a wider variety of questions, it is significantly more difficult to generate an accurate topographical map than it is to generate an accurate skyline.
+
 ### Modeling Linguistic Pattern
 
-Classifiers can help us to understand the linguistic patterns that occur in natural language, by allowing us to create explicit models that capture those patterns. Either way, these explicit models serve two important purposes: they help us to understand linguistic patterns, and they can be used to make predictions about new language data. The extent to which explicit models can give us insights into linguistic patterns depends largely on what kind of model is used. Some models, such as decision trees, are relatively transparent, and give us direct information about which factors are important in making decisions and about which factors are related to one another. Other models, such as multi-level neural networks, are much more opaque. But all explicit models can make predictions about new "unseen" language data that was not included in the corpus used to build the model. These predictions can be evaluated to assess the accuracy of the model. Once a model is deemed sufficiently accurate, it can then be used to automatically predict information about new language data. These predictive models can be combined into systems that perform many useful language processing tasks, such as document classification, automatic translation, and question answering.
+Classifiers can help us to understand the linguistic patterns that occur in natural language, by allowing us to create explicit models that capture those patterns. Either way, these explicit models serve two important purposes: *they help us to understand linguistic patterns, and they can be used to make predictions about new language data*. 
+
+The extent to which explicit models can give us insights into linguistic patterns depends largely on what kind of model is used. Some models, such as decision trees, are relatively transparent, and give us direct information about which factors are important in making decisions and about which factors are related to one another. Other models, such as multi-level neural networks, are much more opaque. But all explicit models can make predictions about new "unseen" language data that was not included in the corpus used to build the model. These predictions can be evaluated to assess the accuracy of the model. Once a model is deemed sufficiently accurate, it can then be used to automatically predict information about new language data. These predictive models can be combined into systems that perform many useful language processing tasks, such as document classification, automatic translation, and question answering.
 
 分类器可以帮助我们了解语言中出现的模式，并且可以用来预测新的语言数据。分类器模型展现语言模式有的直观，例如决策树分类器，有的晦涩，例如多层神经网络。当分类器可以很好的预测新的语言数据时，就可以很好的集成在别的系统中，例如文档分类，机器翻译等
 
@@ -2095,9 +2206,303 @@ It's important to understand what we can learn about language from an automatica
 
 Most models that are automatically constructed from a corpus are descriptive models; in other words, they can tell us what features are relevant to a given pattern or construction, but they can't necessarily tell us how those features and patterns relate to one another. If our goal is to understand the linguistic patterns, then we can use this information about which features are related as a starting point for further experiments designed to tease apart the relationships between features and patterns. On the other hand, if we're just interested in using the model to make predictions (e.g., as part of a language processing system), then we can use the model to make predictions about new data without worrying about the details of underlying causal relationships.
 
+## Summary
+
+- Modeling the linguistic data found in corpora can help us to understand linguistic patterns, and can be used to make predictions about new language data.
+- Supervised classifiers use labeled training corpora to build models that predict the label of an input based on specific features of that input.
+- Supervised classifiers can perform a wide variety of NLP tasks, including document classification, part-of-speech tagging, sentence segmentation, dialogue act type identification, and determining entailment relations, and many other tasks.
+- When training a supervised classifier, you should split your corpus into three datasets: a training set for building the classifier model; a dev-test set for helping select and tune the model's features; and a test set for evaluating the final model's performance.
+- When evaluating a supervised classifier, it is important that you use fresh data, that was not included in the training or dev-test set. Otherwise, your evaluation results may be unrealistically optimistic.
+- Decision trees are automatically constructed tree-structured flowcharts that are used to assign labels to input values based on their features. Although they're easy to interpret, they are not very good at handling cases where feature values interact in determining the proper label.
+- In naive Bayes classifiers, each feature independently contributes to the decision of which label should be used. This allows feature values to interact, but can be problematic when two or more features are highly correlated with one another.
+- Maximum Entropy classifiers use a basic model that is similar to the model used by naive Bayes; however, they employ iterative optimization to find the set of feature weights that maximizes the probability of the training set.
+- Most of the models that are automatically constructed from a corpus are descriptive — they let us know which features are relevant to a given patterns or construction, but they don't give any information about causal relationships between those features and patterns.
+
+# Chapter 7: Extracting Information from Text
+
+For any given question, it's likely that someone has written the answer down somewhere. The amount of natural language text that is available in electronic form is truly staggering, and is increasing every day. However, the complexity of natural language can make it very difficult to access the information in that text. *The state of the art in NLP is still a long way from being able to build general-purpose representations of meaning from unrestricted text. If we instead focus our efforts on a limited set of questions or "entity relations,"* such as "where are different facilities located," or "who is employed by what company," we can make significant progress. The goal of this chapter is to answer the following questions:
+
+1. How can we build a system that extracts structured data, such as tables, from unstructured text?
+2. What are some robust methods for identifying the entities and relationships described in a text?
+3. Which corpora are appropriate for this work, and how do we use them for training and evaluating our models?
+
+## Information Extraction
+
+Information comes in many shapes and sizes. 
+
+One important form is **structured data**, where there is a regular and predictable organization of entities and relationships. For example, we might be interested in the relation between companies and locations. Given a particular company, we would like to be able to identify the locations where it does business; conversely, given a location, we would like to discover which companies do business in that location. If our data is in tabular form, then answering these queries is straightforward. So first we should convert the **unstructured data** of natural language sentences into the structured data. Then we reap the benefits of powerful query tools such as SQL. This method of getting meaning from text is called **information extraction**.
+
+## Architecture
+
+Simple Pipeline Architecture for an Information Extraction System:
+
+![](ie-architecture.png)
+
+## Preprocess
+
+```
+def preprocess(document):
+    // sentence segment
+    sentences = nltk.sent_tokenize(document)
+    // tokenize
+    sentences = [nltk.word_tokenize(sent) for sent in sentences]
+    // POS tag
+    sentences = [nltk.pos_tag(sent) for sent in sentences]
+```
+
+## Chunking
+
+The basic technique we will use for **entity detection** is **chunking**, which segments and labels multi-token sequences as follows:
+
+![](chunk-segmentation.png)
+
+Each of these largest boxes is called a **chunk**. Like tokenization, which omits whitespace, chunking usually selects a subset of the tokens. Also like tokenization, the pieces produced by a chunker do not overlap in the source text.
+
+### Noun Phrase Chunking
+
+We will begin by considering the task of **noun phrase chunking**, or NP-chunking, where we search for chunks corresponding to individual noun phrases.  `NP`-chunks are often smaller pieces than complete noun phrases. For example, “*the market for system-management software for Digital's hardware*” is a single noun phrase (containing two nested noun phrases), but it is captured in `NP`-chunks by the simpler chunk ”*the market*“. One of the motivations for this difference is that `NP`-chunks are defined so as not to contain other `NP`-chunks.
+
+One of the most useful sources of information for `NP`-chunking is part-of-speech tags. This is one of the motivations for performing part-of-speech tagging in our information extraction system. 
+
+In order to create an `NP`-chunker, we will first define a **chunk grammar**, consisting of rules that indicate how sentences should be chunked. In this case, we will define a simple grammar with a single regular-expression rule:
+
+```python
+def simple_chunk_grammar(sentence):
+    grammar = r"""
+  NP: {<DT|PP\$>?<JJ>*<NN>}   # chunk determiner/possessive, adjectives and noun
+      {<NNP>+}                # chunk sequences of proper nouns
+"""
+    cp = nltk.RegexpParser(grammar)
+    result = cp.parse(sentence)
+    print(result)
+    result.draw()
+```
+
+The rules that make up a chunk grammar use **tag patterns** to describe sequences of tagged words. A tag pattern is a sequence of part-of-speech tags delimited using angle brackets, e.g. `<DT>?<JJ>*<NN>`. To find the chunk structure for a given sentence, the `RegexpParser` chunker begins with a flat structure in which no tokens are chunked. The chunking rules are applied in turn, successively updating the chunk structure. Once all of the rules have been invoked, the resulting chunk structure is returned.
+
+We can use this method to explore tagged corpus to do some experiments:
+
+```python
+cp = nltk.RegexpParser('CHUNK: {<V.*> <TO> <V.*>}')
+brown = nltk.corpus.brown
+for sent in brown.tagged_sents():
+    tree = cp.parse(sent)
+    for subtree in tree.subtrees():
+        if subtree.label() == 'CHUNK': print(subtree)
+```
+
+### Chinking
+
+Sometimes it is easier to define what we want to exclude from a chunk. We can define a **chink** to be a sequence of tokens that is *not included in a chunk*. 
+
+Chinking is the process of removing a sequence of tokens from a chunk. If the matching sequence of tokens spans an entire chunk, then the whole chunk is removed; if the sequence of tokens appears in the middle of the chunk, these tokens are removed, leaving two chunks where there was only one before. If the sequence is at the periphery of the chunk, these tokens are removed, and a smaller chunk remains. For example:
+
+```
+` `	     Entire chunk	         Middle of a chunk	        End of a chunk
+Input	[a/DT little/JJ dog/NN]	 [a/DT little/JJ dog/NN]	[a/DT little/JJ dog/NN]
+Operation	Chink "DT JJ NN"	  Chink "JJ"	             Chink "NN"
+Pattern	 }DT JJ NN{	              }JJ{	                     }NN{
+Output	a/DT little/JJ dog/NN	 [a/DT] little/JJ [dog/NN]	[a/DT little/JJ] dog/NN
+```
+
+The pattern syntax for chunking and chinking:
+
+```python
+grammar = r"""
+  NP:
+    {<.*>+}          # Chunk everything
+    }<VBD|IN>+{      # Chink sequences of VBD and IN
+"""
+```
+
+### Representing Chunks
+
+Chunk structures can be represented using either **tags** or **trees**. 
+
+The most widespread file representation uses **IOB tags**. In this scheme, each token is tagged with one of three special chunk tags, `I` (inside), `O` (outside), or `B` (begin). A token is tagged as `B` if it marks the beginning of a chunk. Subsequent tokens within the chunk are tagged `I`. All other tokens are tagged `O`. The `B` and `I` tags are suffixed with the chunk type, e.g. `B-NP`, `I-NP`. Of course, it is not necessary to specify a chunk type for tokens that appear outside a chunk, so these are just labeled `O`.
+
+![](chunk-tag-representation.png)
+
+IOB tags have become the standard way to represent chunk structures in files:
+
+```
+We PRP B-NP
+saw VBD O
+the DT B-NP
+yellow JJ I-NP
+dog NN I-NP
+```
+
+In this representation there is one token per line, each with its part-of-speech tag and chunk tag. This format permits us to represent more than one chunk type, so long as the chunks do not overlap.
+
+Chunk structures can also be represented using trees. These have the benefit that each chunk is a constituent that can be manipulated directly.
+
+![](chunk-tree-representation.png)
+
+NLTK uses trees for its internal representation of chunks, but provides methods for reading and writing such trees to the IOB format.
+
+### Evaluating
+
+Now you have a taste of what chunking does, but we haven't explained how to evaluate chunkers. As usual, this requires a suitably annotated corpus. We begin by looking at the mechanics of converting IOB format into an NLTK tree, then at how this is done on a larger scale using a chunked corpus. We will see how to score the accuracy of a chunker relative to a corpus, then look at some more data-driven ways to search for NP chunks.
+
+#### Reading IOB Format and the CoNLL 2000 Corpus
+
+We can use `nltk.chunk.conllstr2tree` to load text that as following format:
+
+```
+We PRP B-NP
+saw VBD O
+the DT B-NP
+yellow JJ I-NP
+dog NN I-NP
+```
+
+For example:
+
+```
+text = '''
+he PRP B-NP
+accepted VBD B-VP
+the DT B-NP
+position NN I-NP
+of IN B-PP
+vice NN B-NP
+chairman NN I-NP
+of IN B-PP
+Carlyle NNP B-NP
+Group NNP I-NP
+, , O
+a DT B-NP
+merchant NN I-NP
+banking NN I-NP
+concern NN I-NP
+. . O
+'''
+tree = nltk.chunk.conllstr2tree(text, chunk_types=['NP'])
+tree.draw()
+```
+
+The chunking tree as follows:
+
+![](chunking-tree-example.png)
+
+#### Chunked corpus CoNLL 2000
+
+We can use the NLTK corpus module to access a larger amount of chunked text. The CoNLL 2000 corpus contains 270k words of Wall Street Journal text, divided into "train" and "test" portions, annotated with part-of-speech tags and chunk tags in the IOB format.
+
+```
+from nltk.corpus import conll2000
+print(conll2000.chunked_sents('train.txt')[99])
+```
+
+CoNLL 2000 corpus contains three chunk types: `NP` chunks, which we have already seen; `VP` chunks such as *has already delivered*; and `PP` chunks such as *because of*. Since we are only interested in the `NP` chunks right now, we can use the `chunk_types` argument to select them:
+
+```
+conll2000.chunked_sents('train.txt', chunk_types=['NP'])
+```
+
+#### Baselines and Evaluation
+
+We start off by establishing a **baseline** for the trivial chunk parser `cp` that creates no chunks:
+
+```
+from nltk.corpus import conll2000
+test_sents = conll2000.chunked_sents('test.txt', chunk_types=['NP'])
+
+grammar = ""  # no chunks
+cp = nltk.RegexpParser("")
+print(cp.evaluate(test_sents))
+```
+
+Now let's try a naive **regular expression chunker** that looks for tags beginning with letters that are characteristic of noun phrase tags (e.g. `CD`, `DT`, and `JJ`):
+
+```
+grammar = r"NP: {<[CDJNP].*>+}"  # a simple regular expression chunker
+cp = nltk.RegexpParser("")
+print(cp.evaluate(test_sents))
+```
+
+We can improve this regular expression chunker by adopting a more data-driven approach, where we use the training corpus to find the chunk tag (`I`, `O`, or `B`) that is most likely for each part-of-speech tag. In other words, we can build a chunker using a **unigram tagger**. But rather than trying to determine the correct part-of-speech tag for each word, we are trying to determine the correct chunk tag, given each word's part-of-speech tag.
+
+```python
+class UnigramChunker(nltk.ChunkParserI):
+    def __init__(self, train_sents):
+        train_data = [[(t,c) for w,t,c in nltk.chunk.tree2conlltags(sent)]
+                      for sent in train_sents]
+        #  we can also build BigramChunker by BigramTagger
+        self.tagger = nltk.UnigramTagger(train_data)
+
+    def parse(self, sentence):
+        pos_tags = [pos for (word,pos) in sentence]
+        tagged_pos_tags = self.tagger.tag(pos_tags)
+        chunktags = [chunktag for (pos, chunktag) in tagged_pos_tags]
+        conlltags = [(word, pos, chunktag) for ((word,pos),chunktag)
+                     in zip(sentence, chunktags)]
+        return nltk.chunk.conlltags2tree(conlltags)
+```
+
+Most of the code in this class is simply used to convert back and forth between the chunk tree representation used by NLTK's `ChunkParserI` interface, and the IOB representation used by the embedded tagger.
+
+Now that we have `UnigramChunker`, we can train it using the CoNLL 2000 corpus, and test its resulting performance:
+
+```python
+test_sents = conll2000.chunked_sents('test.txt', chunk_types=['NP'])
+train_sents = conll2000.chunked_sents('train.txt', chunk_types=['NP'])
+unigram_chunker = UnigramChunker(train_sents)
+print(unigram_chunker.evaluate(test_sents))
+```
+
+Let's take a look at what it's learned, by using its unigram tagger to assign a tag to each of the part-of-speech tags that appear in the corpus:
+
+```python
+postags = sorted(set(pos for sent in train_sents
+                     for (word,pos) in sent.leaves()))
+print(unigram_chunker.tagger.tag(postags))
+```
+
+Both the regular-expression based chunkers and the n-gram chunkers decide what chunks to create entirely based on part-of-speech tags. However, sometimes part-of-speech tags are insufficient to determine how a sentence should be chunked. We need to make use of information about the content of the words, in addition to just their part-of-speech tags, if we wish to maximize chunking performance. One way that we can incorporate information about the content of words is to use a **classifier-based tagger** to chunk the sentence. Like the n-gram chunker considered in the previous section, this classifier-based chunker will work by assigning IOB tags to the words in a sentence, and then converting those tags to chunks. The basic code for the classifier-based NP chunker as follows:
+
+```python
+class ConsecutiveNPChunkTagger(nltk.TaggerI): 
+
+    def __init__(self, train_sents):
+        train_set = []
+        for tagged_sent in train_sents:
+            untagged_sent = nltk.tag.untag(tagged_sent)
+            history = []
+            for i, (word, tag) in enumerate(tagged_sent):
+                featureset = npchunk_features(untagged_sent, i, history)
+                train_set.append( (featureset, tag) )
+                history.append(tag)
+        self.classifier = nltk.MaxentClassifier.train( 
+            train_set, algorithm='megam', trace=0)
+
+    def tag(self, sentence):
+        history = []
+        for i, word in enumerate(sentence):
+            featureset = npchunk_features(sentence, i, history)
+            tag = self.classifier.classify(featureset)
+            history.append(tag)
+        return zip(sentence, history)
+
+class ConsecutiveNPChunker(nltk.ChunkParserI):
+    def __init__(self, train_sents):
+        tagged_sents = [[((w,t),c) for (w,t,c) in
+                         nltk.chunk.tree2conlltags(sent)]
+                        for sent in train_sents]
+        self.tagger = ConsecutiveNPChunkTagger(tagged_sents)
+
+    def parse(self, sentence):
+        tagged_sents = self.tagger.tag(sentence)
+        conlltags = [(w,t,c) for ((w,t),c) in tagged_sents]
+        return nltk.chunk.conlltags2tree(conlltags)
+```
 
 
-## Examples
+
+
+
+# Examples
 
 统计文本中双元音出现频率
 
