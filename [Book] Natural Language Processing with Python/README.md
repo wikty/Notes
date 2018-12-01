@@ -2744,6 +2744,10 @@ The goal of this chapter is to answer the following questions:
 2. How do we represent the structure of sentences using syntax trees?
 3. How do parsers analyze a sentence and automatically build a syntax tree?
 
+This chapter presents grammars and parsing, as the formal and computational methods for investigating and modeling the linguistic phenomena we have been discussing. As we shall see, patterns of well-formedness and ill-formedness in a sequence of words can be understood with respect to the phrase structure and dependencies. We can develop formal models of these structures using grammars and parsers. As before, a key motivation is natural language *understanding*. How much more of the meaning of a text can we access when we can reliably recognize the linguistic structures it contains? Having read in a text, can a program "understand" it enough to be able to answer simple questions about "what happened" or "who did what to whom"?
+
+本章主要介绍语法（grammar）和句法解析（syntactic parsing）的相关形式化方法。语言中可以形式化的东西，我们使用短语结构（phrase structure）来描述；难以形式化的东西，使用依赖关系（dependencies）来描述，它们分别对应短语结构语法（又称为上下文无关语法）和依赖关系语法，我们将研究如何使用这些工具去近似表示自然语言的语法或者自然语言的部分语法。
+
 ## Some Grammatical Dilemmas 语法困境
 
 ### Linguistic Data and Unlimited Possibilities 语言数据有无限可能性
@@ -2800,8 +2804,6 @@ There are two syntactic parsing trees (ambiguity) for the above sentence:
 ![](ch08-tree-2.png)
 
 As we said, the prepositional phrase *in my pajamas* can be used to describe the elephant or the shooting event.
-
-This chapter presents grammars and parsing, as the formal and computational methods for investigating and modeling the linguistic phenomena we have been discussing. As we shall see, patterns of well-formedness and ill-formedness in a sequence of words can be understood with respect to the phrase structure and dependencies. We can develop formal models of these structures using grammars and parsers. As before, a key motivation is natural language *understanding*. How much more of the meaning of a text can we access when we can reliably recognize the linguistic structures it contains? Having read in a text, can a program "understand" it enough to be able to answer simple questions about "what happened" or "who did what to whom"?
 
 ## What's the Use of Syntax?
 
@@ -2966,13 +2968,243 @@ A simple kind of bottom-up parser is the shift-reduce parser. In common with all
 
 自底向上解析器，以输入语句为起点，不断应用语法产生规则进行右手（right-hand side）替换，直到变为 S 节点则停止。
 
+The shift-reduce parser repeatedly pushes the next input word onto a stack; this is the **shift** operation. If the top n items on the stack match the n items on the right hand side of some production, then they are all popped off the stack, and the item on the left-hand side of the production is pushed on the stack. This replacement of the top n items with a single item is the **reduce** operation. This operation may only be applied to the top of the stack; reducing items lower in the stack must be done before later items are pushed onto the stack. The parser finishes when all the input is consumed and there is only one item remaining on the stack, a parse tree with an S node as its root. The shift-reduce parser builds a parse tree during the above process. Each time it pops n items off the stack it combines them into a partial parse tree, and pushes this back on the stack. We can see the shift-reduce parsing algorithm in action using the graphical demonstration nltk.app.srparser(). Six stages of the execution of this parser are shown
 
+![](srparser-6-stages.png)
 
+shift-reduce 解析器的基本思路：不断将输入语句逐词压人栈中，如果栈顶若干元素跟某个产生式规则的右边相匹配，则用该产生式的左侧替换这些栈顶的元素（同时构建局部树结构），直到输入语句被消耗完结束。
 
+NLTK provides `ShiftReduceParser()`, a simple implementation of a shift-reduce parser. This parser does not implement any backtracking, so it is not guaranteed to find a parse for a text, even if one exists. Furthermore, it will only find at most one parse, even if more parses exist.
 
+```
+sr_parser = nltk.ShiftReduceParser(grammar1)
+```
 
+A shift-reduce parser can reach a dead end and fail to find any parse, even if the input sentence is well-formed according to the grammar. When this happens, no input remains, and the stack contains items which cannot be reduced to an `S`. The problem arises because there are choices made earlier that cannot be undone by the parser (although users of the graphical demonstration can undo their choices). There are two kinds of choices to be made by the parser: (a) which reduction to do when more than one is possible (b) whether to shift or reduce when either action is possible. 
 
+A shift-reduce parser may be extended to implement policies for resolving such conflicts. For example, it may address shift-reduce conflicts by shifting only when no reductions are possible, and it may address reduce-reduce conflicts by favoring the reduction operation that removes the most items from the stack. (A generalization of shift-reduce parser, a "lookahead LR parser", is commonly used in programming language compilers.)
 
+即使一个语句符合形式语法，shift-reduce 解析器也不能保证会找到解析树，因为可能早期进行的 shift 或 reduce 操作导致了最终的错误，而解析过程是无法回退的，最终使得解析树无法被找到。不过我们可以改进它来解决这些问题。
+
+The advantage of shift-reduce parsers over recursive descent parsers is that they only build structure that corresponds to the words in the input. Furthermore, they only build each sub-structure once, e.g. `NP(Det(the), N(man))` is only built and pushed onto the stack a single time, regardless of whether it will later be used by the `VP -> V NP PP` reduction or the `NP -> NP PP` reduction.
+
+### The Left-Corner Parser
+
+Left-corner 是一种综合自底向上和自顶向下的解析方法。
+
+One of the problems with the recursive descent parser is that it goes into an infinite loop when it encounters a left-recursive production. This is because it applies the grammar productions blindly, without considering the actual input sentence. A left-corner parser is a **hybrid** between the **bottom-up** and **top-down** approaches we have seen.
+
+假设我们想要以递归下降的方式解析语句 "John saw Mary"，首先应用规则 S->NP VP，然后考虑以下几个产生式来展开 NP：
+
+1. NP -> Det N
+2. NP -> Det N PP
+3. NP -> "John" | "Mary" | "Bob"
+
+递归下降的话，会盲目的应用所有这些规则，导致做了很多无用功。如果可以改进的话，我们应该用哪个规则来展开 NP 呢？显然是规则 3，因为它可以产生输入语句中对应的单词 "John"，这里我们结合了输入数据的情况来对规则进行展开。这样按照递归下降的方式不断用规则右侧替换左侧（自顶向下）并且应用规则的同时考虑输入数据的情况进行规则过滤（自底向上）就是自顶向下和自底向上相结合的方法。这样显然比递归下降中盲目的应用规则要高效。
+
+More generally, we say that a category B is a **left-corner** of a tree rooted in A if A ⇒* B α. 在上例中 John 就是以 S 为根的树的 left-corner。
+
+A left-corner parser is a top-down parser with bottom-up filtering. Unlike an ordinary recursive descent parser, it does not get trapped in left recursive productions. Before starting its work, a left-corner parser preprocesses the context-free grammar to build a table where each row contains two cells, the first holding a non-terminal, and the second holding the collection of possible left corners of that non-terminal. Each time a production is considered by the parser, it checks that the next input word is compatible with at least one of the pre-terminal categories in the left-corner table (bottom-up filtering).
+
+### Chart parsing
+
+The simple parsers discussed above suffer from limitations in both completeness and efficiency. In order to remedy these, we will apply the algorithm design technique of dynamic programming to the parsing problem. **Dynamic programming** stores intermediate results and re-uses them when appropriate, achieving significant efficiency gains. This technique can be applied to syntactic parsing, allowing us to store partial solutions to the parsing task and then look them up as necessary in order to efficiently arrive at a complete solution. This approach to parsing is known as **chart parsing**.
+
+Dynamic programming allows us to build the `PP` "in my pajamas" just once. The first time we build it we save it in a table, then we look it up when we need to use it as a subconstituent of either the object `NP` or the higher `VP`. This table is known as a **well-formed substring table**, or WFST for short. (The term "substring" refers to a contiguous sequence of words within a sentence.) We will show how to construct the WFST bottom-up so as to systematically record what syntactic constituents have been found.
+
+## Dependencies and Dependency Grammar
+
+Phrase structure grammar is concerned with how words and sequences of words combine to form constituents. 
+
+A distinct and complementary approach, dependency grammar, focusses instead on how words relate to other words. 
+
+本章用于句法解析的两个工具：
+
+* 短语结构语法（phrase structure grammar），关注单词和单词序列是如何组合成为句子成分的。
+* 依赖关系语法（dependency grammar），关注语句中单词之间的依赖关系。
+
+Dependency is a binary asymmetric relation that holds between a **head** and its **dependents**. The head of a sentence is usually taken to be the tensed verb, and every other word is either dependent on the sentence head, or connects to it through a path of dependencies.
+
+依赖关系表示 head 和 dependents 之间的二元非对称关系。一个语句中各个单词通过依赖关系构成了依赖关系图。
+
+A dependency representation is a labeled directed graph, where the nodes are the lexical items and the labeled arcs represent dependency relations from heads to dependents.
+
+![](dependency-graph-example.png)
+
+"I" is the `SBJ` (subject) of "shot" (which is the head of the whole sentence), and "in" is an `NMOD` (noun modifier of "elephant"). In contrast to phrase structure grammar, therefore, dependency grammars can be used to directly express grammatical functions as a type of dependency.
+
+从上例可以看出，依赖语法也可以通过依赖关系来表示句子成分之间的语法关系。
+
+A dependency graph is **projective** if, when all the words are written in linear order, the edges can be drawn above the words without crossing. This is equivalent to saying that a word and all its descendents (dependents and dependents of its dependents, etc.) form a contiguous sequence of words within the sentence. The above image is projective, and we can parse many sentences in English using a projective dependency parser. In languages with more flexible word order than English, non-projective dependencies are more frequent.
+
+有一种依赖图叫 projective 依赖图，利用这类依赖图我们可以解析许多英语中的语句。不过对于单词顺序更为混乱的语言来说，可能 non-projective 依赖图更好些。
+
+Here's one way of encoding a dependency grammar in NLTK — note that it only captures bare dependency information without specifying the type of dependency:
+
+```python
+groucho_dep_grammar = nltk.DependencyGrammar.fromstring("""
+    'shot' -> 'I' | 'elephant' | 'in'
+    'elephant' -> 'an' | 'in'
+    'in' -> 'pajamas'
+    'pajamas' -> 'my'
+    """)
+
+pdp = nltk.ProjectiveDependencyParser(groucho_dep_grammar)
+sent = 'I shot an elephant in my pajamas'.split()
+trees = pdp.parse(sent)
+for tree in trees:
+    print(tree)
+```
+
+可以得到两个解析树（正如之前我们使用短语结构语法解析时得到的那样）：
+
+```
+(shot I (elephant an (in (pajamas my))))
+(shot I (elephant an) (in (pajamas my)))
+```
+
+![](dependency-tree-ambiguity-1.png)
+
+![](dependency-tree-ambiguity-2.png)
+
+Various criteria have been proposed for deciding what is the head *H* and what is the dependent *D* in a construction *C*. Some of the most important are the following:
+
+1. *H* determines the distribution class of *C*; or alternatively, the external syntactic properties of *C* are due to *H*.
+2. *H* determines the semantic type of *C*.
+3. *H* is obligatory while *D* may be optional.
+4. *H* selects *D* and determines whether it is obligatory or optional.
+5. The morphological form of *D* is determined by *H* (e.g. agreement or case government).
+
+如何鉴别 Head 和 Dependents 的一些依据。
+
+When we say in a phrase structure grammar that the immediate constituents of a `PP` are `P` and `NP`, we are implicitly appealing to the head / dependent distinction. A prepositional phrase is a phrase whose head is a preposition; moreover, the `NP` is a dependent of `P`. The same distinction carries over to the other types of phrase that we have discussed. The key point to note here is that although phrase structure grammars seem very different from dependency grammars, they implicitly embody a recognition of dependency relations. While CFGs are not intended to directly capture dependencies, more recent linguistic frameworks have increasingly adopted formalisms which combine aspects of both approaches.
+
+尽管短语结构语法看起来跟依赖关系语法差别较大，不过实际上短语结构语法其实隐含了表示了依赖关系，比如：介词短语 PP 隐含表示了 介词 P 和名词短语 NP 的依赖关系。
+
+### Valency and the Lexicon 配价和词典
+
+配价（valence、谓语配价(verb valency)）是一个语言学术语，最初（同时也主要）用于说明一个动词能支配多少种不同性质的名词性短语的数目，之后又拓展到形容词和名词领域。我们这里要考虑跟动词产生依赖关系的有哪些成分，以便在依赖语法中准确表示这些依赖关系。
+
+For example, VP productions and their lexical heads:
+
+```
+VP -> V Adj	was
+VP -> V NP	saw
+VP -> V S	thought
+VP -> V NP PP	put
+```
+
+That is, was can occur with a following `Adj`, saw can occur with a following `NP`, thought can occur with a following `S` and put can occur with a following `NP` and `PP`. The dependents `Adj`, `NP`, `PP` and `S` are often called **complements** of the respective verbs and there are strong constraints on what verbs can occur with what complements.
+
+从上面的例子可以看出，动词（作为 heads）和补语（作为 dependents）有很强的约束关系，即特定动词后面的成分必须是相匹配的内容类型。动词和依赖成分存在一对多的关系，导致二义性。
+
+In the tradition of dependency grammar, the verbs are said to have different valencies. Valency restrictions are not just applicable to verbs, but also to the other classes of heads.
+
+这就是指动词的配价（valency）。
+
+To introduce the valency restriction in dependency grammar. We can do this by dividing the class of verbs into "subcategories", each of which is associated with a different set of complements. For example:
+
+```
+Symbol	Meaning	Example
+IV	intransitive verb	barked
+TV	transitive verb	saw a man
+DatV	dative verb	gave a dog to a man
+SV	sentential verb	said that a dog barked
+```
+
+为了在依赖语法中引入动词配价约束，我们需要将动词划分为子类别，比如上面的划分，以确保每个子类别都有唯一的 head 和 dependents 依赖关系。
+
+### Scaling Up 形式语法很难实现规模化
+
+So far, we have only considered "toy grammars," small grammars that illustrate the key aspects of parsing. But there is an obvious question as to whether the approach can be scaled up to cover large corpora of natural languages. How hard would it be to construct such a set of productions by hand? In general, the answer is: *very hard*. Even if we allow ourselves to use various formal devices that give much more succinct representations of grammar productions, it is still extremely difficult to keep control of the complex interactions between the many productions required to cover the major constructions of a language. In other words, it is hard to modularize grammars so that one portion can be developed independently of the other parts. This in turn means that it is difficult to distribute the task of grammar writing across a team of linguists. Another difficulty is that as the grammar expands to cover a wider and wider range of constructions, there is a corresponding increase in the number of analyses which are admitted for any one sentence. In other words, ambiguity increases with coverage.
+
+Despite these problems, some large collaborative projects have achieved interesting and impressive results in developing rule-based grammars for several languages. Examples are the Lexical Functional Grammar (LFG) Pargram project, the Head-Driven Phrase Structure Grammar (HPSG) LinGO Matrix framework, and the Lexicalized Tree Adjoining Grammar XTAG Project.
+
+## Grammar Development
+
+Parsing builds trees over sentences, according to a phrase structure grammar. Now, all the examples we gave above only involved toy grammars containing a handful of productions. What happens if we try to scale up this approach to deal with realistic corpora of language? In this section we will see how to access treebanks, and look at the challenge of developing broad-coverage grammars.
+
+开发以及应用可以覆盖自然语言语法的形式语法分析器，不管是从性能还是从复杂度来看，是及其具有挑战的。
+
+### Treebanks and Grammars
+
+The `corpus` module defines the `treebank` corpus reader, which contains a 10% sample of the Penn Treebank corpus. We can use this data to help develop a grammar. For example:
+
+```python
+# find verbs that take sentential complements
+def filter(tree):
+    child_nodes = [child.label() for child in tree
+                   if isinstance(child, nltk.Tree)]
+    return  (tree.label() == 'VP') and ('S' in child_nodes)
+
+# Searching a Treebank to find Sentential Complements
+from nltk.corpus import treebank
+print([subtree for tree in treebank.parsed_sents()
+         for subtree in tree.subtrees(filter)])
+```
+
+The Prepositional Phrase Attachment Corpus, `nltk.corpus.ppattach` is another source of information about the valency of particular verbs. Here we illustrate a technique for mining this corpus. It finds pairs of prepositional phrases where the preposition and noun are fixed, but where the choice of verb determines whether the prepositional phrase is attached to the `VP` or to the `NP`.
+
+```python
+from collections import defaultdict
+
+entries = nltk.corpus.ppattach.attachments('training')
+table = defaultdict(lambda: defaultdict(set))
+
+for entry in entries:
+    key = entry.noun1 + '-' + entry.prep + '-' + entry.noun2
+    table[key][entry.attachment].add(entry.verb)
+
+for key in sorted(table):
+    if len(table[key]) > 1:
+        print(key, 'N:', sorted(table[key]['N']), 'V:', sorted(table[key]['V']))
+```
+
+The NLTK corpus collection includes data from the PE08 Cross-Framework and Cross Domain Parser Evaluation Shared Task. A collection of larger grammars has been prepared for the purpose of comparing different parsers, which can be obtained by downloading the `large_grammars` package (e.g. `python -m nltk.downloader large_grammars`).
+
+The NLTK corpus collection also includes a sample from the *Sinica Treebank Corpus*, consisting of 10,000 parsed sentences drawn from the *Academia Sinica Balanced Corpus of Modern Chinese*.
+
+### Pernicious Ambiguity
+
+Unfortunately, as the coverage of the grammar increases and the length of the input sentences grows, the number of parse trees grows rapidly. In fact, it grows at an astronomical rate. So much for structural ambiguity; what about lexical ambiguity? As soon as we try to construct a broad-coverage grammar, we are forced to make lexical entries highly ambiguous for their part of speech. 
+
+覆盖率越高的形式语法，越难以应用，因为语法解析时会得到很多的歧义解析树（也即 structural ambiguity）和词汇歧义。
+
+The solution to these problems is provided by **probabilistic parsing**, which allows us to rank the parses of an ambiguous sentence on the basis of evidence from corpora.
+
+### Weighted Grammar
+
+As we have just seen, dealing with ambiguity is a key challenge in developing broad coverage parsers. Chart parsers improve the efficiency of computing multiple parses of the same sentences, but they are still overwhelmed by the sheer number of possible parses. **Weighted grammars** and **probabilistic parsing** algorithms have provided an effective solution to these problems.
+
+A **probabilistic context free grammar** (or *PCFG*) is a context free grammar that associates a probability with each of its productions. It generates the same set of parses for a text that the corresponding context free grammar does, and assigns a probability to each parse. The probability of a parse generated by a PCFG is simply the product of the probabilities of the productions used to generate it.
+
+The simplest way to define a PCFG is to load it from a specially formatted string consisting of a sequence of weighted productions, where weights appear in brackets, as shown
+
+```
+grammar = nltk.PCFG.fromstring("""
+    S    -> NP VP              [1.0]
+    VP   -> TV NP              [0.4]
+    VP   -> IV                 [0.3]
+    VP   -> DatV NP NP         [0.3]
+    TV   -> 'saw'              [1.0]
+    IV   -> 'ate'              [1.0]
+    DatV -> 'gave'             [1.0]
+    NP   -> 'telescopes'       [0.8]
+    NP   -> 'Jack'             [0.2]
+    """)
+```
+
+## Summary
+
+- Sentences have internal organization that can be represented using a tree. Notable features of constituent structure are: recursion, heads, complements and modifiers.
+- A grammar is a compact characterization of a potentially infinite set of sentences; we say that a tree is well-formed according to a grammar, or that a grammar licenses a tree.
+- A grammar is a formal model for describing whether a given phrase can be assigned a particular constituent or dependency structure.
+- Given a set of syntactic categories, a context-free grammar uses a set of productions to say how a phrase of some category *A* can be analyzed into a sequence of smaller parts α1 ... αn.
+- A dependency grammar uses productions to specify what the dependents are of a given lexical head.
+- Syntactic ambiguity arises when one sentence has more than one syntactic analysis (e.g. prepositional phrase attachment ambiguity).
+- A parser is a procedure for finding one or more trees corresponding to a grammatically well-formed sentence.
+- A simple top-down parser is the recursive descent parser, which recursively expands the start symbol (usually `S`) with the help of the grammar productions, and tries to match the input sentence. This parser cannot handle left-recursive productions (e.g., productions such as `NP -> NP PP`). It is inefficient in the way it blindly expands categories without checking whether they are compatible with the input string, and in repeatedly expanding the same non-terminals and discarding the results.
+- A simple bottom-up parser is the shift-reduce parser, which shifts input onto a stack and tries to match the items at the top of the stack with the right hand side of grammar productions. This parser is not guaranteed to find a valid parse for the input even if one exists, and builds substructure without checking whether it is globally consistent with the grammar.
 
 
 
