@@ -2401,7 +2401,7 @@ CoNLL 2000 corpus contains three chunk types: `NP` chunks, which we have already
 conll2000.chunked_sents('train.txt', chunk_types=['NP'])
 ```
 
-#### Baselines and Evaluation
+#### Models
 
 We start off by establishing a **baseline** for the trivial chunk parser `cp` that creates no chunks:
 
@@ -2463,6 +2463,10 @@ print(unigram_chunker.tagger.tag(postags))
 Both the regular-expression based chunkers and the n-gram chunkers decide what chunks to create entirely based on part-of-speech tags. However, sometimes part-of-speech tags are insufficient to determine how a sentence should be chunked. We need to make use of information about the content of the words, in addition to just their part-of-speech tags, if we wish to maximize chunking performance. One way that we can incorporate information about the content of words is to use a **classifier-based tagger** to chunk the sentence. Like the n-gram chunker considered in the previous section, this classifier-based chunker will work by assigning IOB tags to the words in a sentence, and then converting those tags to chunks. The basic code for the classifier-based NP chunker as follows:
 
 ```python
+def npchunk_features(sentence, i, history):
+    word, pos = sentence[i]
+    return {"pos": pos}
+
 class ConsecutiveNPChunkTagger(nltk.TaggerI): 
 
     def __init__(self, train_sents):
@@ -2471,6 +2475,7 @@ class ConsecutiveNPChunkTagger(nltk.TaggerI):
             untagged_sent = nltk.tag.untag(tagged_sent)
             history = []
             for i, (word, tag) in enumerate(tagged_sent):
+                # feature extractor
                 featureset = npchunk_features(untagged_sent, i, history)
                 train_set.append( (featureset, tag) )
                 history.append(tag)
@@ -2496,9 +2501,238 @@ class ConsecutiveNPChunker(nltk.ChunkParserI):
         tagged_sents = self.tagger.tag(sentence)
         conlltags = [(w,t,c) for ((w,t),c) in tagged_sents]
         return nltk.chunk.conlltags2tree(conlltags)
+
+chunker = ConsecutiveNPChunker(train_sents)
+print(chunker.evaluate(test_sents))
 ```
 
+We can improve model by using different feature extractors:
 
+```python
+# pos and previous pos
+def npchunk_features(sentence, i, history):
+    word, pos = sentence[i]
+    if i == 0:
+        prevword, prevpos = "<START>", "<START>"
+    else:
+        prevword, prevpos = sentence[i-1]
+    return {"pos": pos, "prevpos": prevpos}
+
+# pos and previous pos and current word
+def npchunk_features(sentence, i, history):
+    word, pos = sentence[i]
+    if i == 0:
+        prevword, prevpos = "<START>", "<START>"
+    else:
+        prevword, prevpos = sentence[i-1]
+    return {"pos": pos, "word": word, "prevpos": prevpos}
+
+# a more complex feature extractor
+def npchunk_features(sentence, i, history):
+    def tags_since_dt(sentence, i):
+        tags = set()
+        for word, pos in sentence[:i]:
+            if pos == 'DT':
+                tags = set()
+            else:
+                tags.add(pos)
+        return '+'.join(sorted(tags))
+    
+    word, pos = sentence[i]
+    if i == 0:
+        prevword, prevpos = "<START>", "<START>"
+    else:
+        prevword, prevpos = sentence[i-1]
+    if i == len(sentence)-1:
+        nextword, nextpos = "<END>", "<END>"
+    else:
+        nextword, nextpos = sentence[i+1]
+    return {"pos": pos,
+            "word": word,
+            "prevpos": prevpos,
+            "nextpos": nextpos, [1]
+            "prevpos+pos": "%s+%s" % (prevpos, pos),  [2]
+            "pos+nextpos": "%s+%s" % (pos, nextpos),
+            "tags-since-dt": tags_since_dt(sentence, i)}
+```
+
+## Recursion in Linguistic Structure
+
+### Building Nested Structure with Cascaded Chunkers
+
+So far, our chunk structures have been relatively flat. Trees consist of tagged tokens, optionally grouped under a chunk node such as `NP`. However, it is possible to build chunk structures of arbitrary depth, simply by creating a multi-stage chunk grammar containing recursive rules.
+
+```python
+grammar = r"""
+  NP: {<DT|JJ|NN.*>+}          # Chunk sequences of DT, JJ, NN
+  PP: {<IN><NP>}               # Chunk prepositions followed by NP
+  VP: {<VB.*><NP|PP|CLAUSE>+$} # Chunk verbs and their arguments
+  CLAUSE: {<NP><VP>}           # Chunk NP, VP
+  """
+cp = nltk.RegexpParser(grammar)
+sentence = [("Mary", "NN"), ("saw", "VBD"), ("the", "DT"), ("cat", "NN"),
+    ("sit", "VB"), ("on", "IN"), ("the", "DT"), ("mat", "NN")]
+    
+tree = cp.parse(sentence)
+tree.draw()
+```
+
+![](cascaded-chunk-example.png)
+
+Unfortunately this result misses the `VP` headed by "saw".
+
+The solution to these problems is to get the chunker to loop over its patterns: after trying all of them, it repeats the process:
+
+```
+cp = nltk.RegexpParser(grammar, loop=2)
+```
+
+### Trees for  hierarchical structure
+
+A tree is a set of connected labeled nodes, each reachable by a unique path from a distinguished root node. 
+
+![](ch7-tree-example.png)
+
+For convenience, there is also a text format for specifying trees:
+
+```
+(S
+   (NP Alice)
+   (VP
+      (V chased)
+      (NP
+         (Det the)
+         (N rabbit))))
+```
+
+Although we will focus on syntactic trees, trees can be used to encode any **homogeneous hierarchical structure** that spans a sequence of linguistic forms (e.g. morphological structure, discourse structure). In the general case, leaves and node values do not have to be strings.
+
+In NLTK, we create a tree by giving a node label and a list of children:
+
+```python
+tree1 = nltk.Tree('NP', ['Alice'])
+tree2 = nltk.Tree('NP', ['the', 'rabbit'])
+# merge tree
+tree3 = nltk.Tree('VP', ['chased', tree2])
+root = nltk.Tree('S', [tree1, tree3])
+print(root.leaves())
+root.draw()
+```
+
+There is standard to use a recursive function to traverse a tree:
+
+```python
+def traverse(t):
+    try:
+        t.label()  # check if t is a tree
+    except AttributeError:
+        print(t, end=" ")
+    else:
+        # Now we know that t.node is defined
+        print('(', t.label(), end=" ")
+        for child in t:
+            traverse(child)
+        print(')', end=" ")
+
+t = nltk.Tree('(S (NP Alice) (VP chased (NP the rabbit)))')
+traverse(t)
+```
+
+## Named Entity Recoginition
+
+**Named entities** are definite **noun phrases** that refer to specific types of individuals, such as organizations, persons, dates, and so on.
+
+![](commonly-used-named-entity-types.png)
+
+### The goal of NER
+
+The goal of a **named entity recognition** (NER) system is to identify all textual mentions of the named entities. This can be broken down into two sub-tasks: identifying the boundaries of the NE, and identifying its type.
+
+While named entity recognition is frequently a prelude to identifying relations in Information Extraction, it can also contribute to other tasks. For example, in Question Answering (QA), we try to improve the precision of Information Retrieval by recovering not whole pages, but just those parts which contain an answer to the user's question. Most QA systems take the documents returned by standard Information Retrieval, and then attempt to isolate the minimal text snippet in the document containing the answer. Now suppose the question was "Who was the first President of the US?", and one of the documents that was retrieved contained the following passage:
+
+> The Washington Monument is the most prominent structure in Washington, D.C. and one of the city's early attractions. It was built in honor of George Washington, who led the country to independence and then became its first President.
+
+Analysis of the question leads us to expect that an answer should be of the form "X was the first President of the US", where X is not only a noun phrase, but also refers to a named entity of type PERSON. This should allow us to ignore the first sentence in the passage. While it contains two occurrences of Washington, named entity recognition should tell us that neither of them has the correct type.
+
+### NER based dictionary
+
+One option would be to look up each word in an appropriate list of names. For example, in the case of locations, we could use a gazetteer, or geographical dictionary, i.e. **look up dictionary**. 
+
+Yeh, it's not a good idea, because we won't be able to identify locations when they do appear in a document. It gets even harder in the case of names for people or organizations. Any list of such names will probably have poor coverage. New organizations come into existence every day, so if we are trying to deal with contemporary newswire or blog entries, it is unlikely that we will be able to recognize many of the entities using gazetteer lookup.
+
+Another major source of difficulty is caused by the fact that many named entity terms are ambiguous. Thus May and North are likely to be parts of named entities for DATE and LOCATION, respectively, but could both be part of a PERSON; conversely Christian Dior looks like a PERSON but is more likely to be of type ORGANIZATION.
+
+Further challenges are posed by multi-word names like Stanford University, and by names that contain other names such as Cecil H. Green Library and Escondido Village Conference Service Center. In named entity recognition, therefore, we need to be able to identify the beginning and end of multi-token sequences.
+
+### NER based classifier
+
+Named entity recognition is a task that is well-suited to the type of classifier-based approach that we saw for **noun phrase chunking**. In particular, we can build a tagger that labels each word in a sentence using the IOB format, where chunks are labeled by their appropriate type. Here is part of the CONLL 2002 (`conll2002`) Dutch training data:
+
+```
+Eddy N B-PER
+Bonte N I-PER
+is V O
+woordvoerder N O
+van Prep O
+diezelfde Pron O
+Hogeschool N B-ORG
+. Punc O
+```
+
+NLTK provides a classifier that has already been trained to recognize named entities, accessed with the function `nltk.ne_chunk()`. If we set the parameter `binary=True` , then named entities are just tagged as `NE`; otherwise, the classifier adds category labels such as PERSON, ORGANIZATION, and GPE.
+
+```
+sent = nltk.corpus.treebank.tagged_sents()[22]
+print(nltk.ne_chunk(sent, binary=True))
+print(nltk.ne_chunk(sent)) 
+```
+
+## Relation Extraction
+
+Once named entities have been identified in a text, we then want to extract the relations that exist between them. As indicated earlier, we will typically be looking for relations between specified types of named entity. One way of approaching this task is to initially look for all triples of the form (*X*, α, *Y*), where *X* and *Y* are named entities of the required types, and α is the string of words that intervenes between *X* and *Y*. We can then use regular expressions to pull out just those instances of α that express the relation that we are looking for
+
+```python
+# regexp for searching word "in"
+IN = re.compile(r'.*\bin\b(?!\b.+ing)')  # (?!\b.+ing\b) is a negative lookahead assertion
+for doc in nltk.corpus.ieer.parsed_docs('NYT_19980315'):
+    for rel in nltk.sem.extract_rels('ORG', 'LOC', doc,
+                                     corpus='ieer', pattern = IN):
+        print(nltk.sem.rtuple(rel))
+```
+
+Searching for the keyword in works reasonably well, though it will also retrieve false positives such as `[ORG: House
+Transportation Committee] , secured the most money in the [LOC: New
+York]`; there is unlikely to be simple string-based method of excluding filler strings such as this.
+
+The method `clause()` prints out the relations in a clausal form:
+
+```
+from nltk.corpus import conll2002
+vnv = """
+(
+is/V|    # 3rd sing present and
+was/V|   # past forms of the verb zijn ('be')
+werd/V|  # and also present
+wordt/V  # past of worden ('become)
+)
+.*       # followed by anything
+van/Prep # followed by van ('of')
+"""
+VAN = re.compile(vnv, re.VERBOSE)
+for doc in conll2002.chunked_sents('ned.train'):
+    for r in nltk.sem.extract_rels('PER', 'ORG', doc,
+                                   corpus='conll2002', pattern=VAN):
+        print(nltk.sem.clause(r, relsym="VAN"))
+```
+
+## Summary
+
+- Information extraction systems search large bodies of unrestricted text for specific types of entities and relations, and use them to populate well-organized databases. These databases can then be used to find answers for specific questions.
+- The typical architecture for an information extraction system begins by segmenting, tokenizing, and part-of-speech tagging the text. The resulting data is then searched for specific types of entity. Finally, the information extraction system looks at entities that are mentioned near one another in the text, and tries to determine whether specific relationships hold between those entities.
+- Entity recognition is often performed using chunkers, which segment multi-token sequences, and label them with the appropriate entity type. Common entity types include ORGANIZATION, PERSON, LOCATION, DATE, TIME, MONEY, and GPE (geo-political entity).
+- Chunkers can be constructed using rule-based systems, such as the `RegexpParser` class provided by NLTK; or using machine learning techniques, such as the `ConsecutiveNPChunker` presented in this chapter. In either case, part-of-speech tags are often a very important feature when searching for chunks.
+- Although chunkers are specialized to create relatively flat data structures, where no two chunks are allowed to overlap, they can be cascaded together to build nested structures.
+- Relation extraction can be performed using either rule-based systems which typically look for specific patterns in the text that connect entities and the intervening words; or using machine-learning systems which typically attempt to learn such patterns automatically from a training corpus.
 
 
 
