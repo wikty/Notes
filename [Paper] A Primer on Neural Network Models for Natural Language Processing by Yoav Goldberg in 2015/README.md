@@ -1289,7 +1289,7 @@ Note: The functions $R$ and $O$ are the same across the sequence positions. And 
 Different instantiations of $R$ and $O$ will result in different network structures, and will exhibit different
 properties in terms of their running times and their ability to be trained effectively using
 gradient-based methods. However, they all adhere to the same abstract interface. We will
-provide details of concrete instantiations of  $R$ and $O$ - the **Simple RNN**, the** LSTM** and the
+provide details of concrete instantiations of  $R$ and $O$ - the **Simple RNN**, the **LSTM** and the
 **GRU**.
 
 ### Representation for Input Sequence
