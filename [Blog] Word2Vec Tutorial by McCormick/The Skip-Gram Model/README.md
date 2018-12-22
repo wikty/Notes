@@ -78,3 +78,8 @@ And what does it mean for two words to have similar contexts? I think you could 
 
 This can also handle stemming for you – the network will likely learn similar word vectors for the words “ant” and “ants” because these should have similar contexts.
 
+# Reference
+
+> McCormick, C. (2016, April 19). *Word2Vec Tutorial - The Skip-Gram Model*. Retrieved from http://www.mccormickml.com
+
+> http://web.stanford.edu/class/cs224n/syllabus.html

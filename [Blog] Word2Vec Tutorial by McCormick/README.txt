@@ -1,1 +1,0 @@
-> McCormick, C. (2017, January 11). Word2Vec Tutorial Part 2 - Negative Sampling. Retrieved from http://www.mccormickml.com
