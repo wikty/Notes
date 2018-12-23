@@ -60,11 +60,19 @@ We can see from the picture, the more common a word is (with larger $x$), the lo
 
 ## Negative Sampling
 
-Training a neural network means taking a training example and adjusting all of the neuron weights slightly so that it predicts that training sample more accurately. In other words, each training sample will tweak *all* of the weights in the neural network. Thus it's infeasible for our neural network to update the huge weight matrix when feed in each training sample.
+Training a neural network means taking a training example and adjusting all of the neuron weights slightly so that it predicts that training sample more accurately. In other words, each training sample will tweak *all* of the weights in the neural network. Thus it's infeasible for our neural network to update the huge weights matrix when feed in each training sample.
 
-Negative sampling addresses this by having each training sample only modify a small percentage of the weights, rather than all of them: When training the network on the word pair (“fox”, “quick”), recall that the label or correct output of the network is a one-hot vector. We call the 
+Negative sampling addresses this by having each training sample only modify a small percentage of the weights, rather than all of them: 
 
+- When training the network on the word pair (“fox”, “quick”), recall that the label or correct output of the network is a one-hot vector. We call the words corresponding to the 0s of one-hot as "negative word", and the 1 as "positive word" (e.g. "quick" is the positive word). 
+- With negative sampling, we are going to randomly select just a small number of “negative” words (let’s say 5) to update the weights for. We will also still update the weights for our “positive” word (which is the word “quick” in our current example). Thus there are only 5+1 columns in the weights matrix of the output layer will be updated. 
+- And In the hidden layer, only the weights for the input word are updated (this is true whether you’re using Negative Sampling or not).
 
+The "negative words" are chosen using a “unigram distribution”. Essentially, the probability for selecting a word as a negative sample is related to its frequency, with more frequent words being more likely to be selected as negative samples.
+$$
+P(w_i) = \frac{  {f(w_i)}^{3/4}  }{\sum_{j=0}^{n}\left(  {f(w_j)}^{3/4} \right) }
+$$
+where $f(w_i)$ is the word count.
 
 # Reference
 
