@@ -161,11 +161,170 @@ Note that the fewer samples we use, the worse is our approximation. We additiona
 
 ## Adaptive Importance Sampling
 
-(http://www.iro.umontreal.ca/~lisa/publications2/index.php/attachments/single/177)
+[Bengio and Senécal (2008)](http://www.iro.umontreal.ca/~lisa/publications2/index.php/attachments/single/177) note that for Importance Sampling, substituting more complex proposal distributions, e.g. bigram and trigram distributions, later in training to relieve the divergence of the unigram distribution $Q$ from the model's true distribution $P$ does not help, as n-gram distributions seem to be quite different from the distribution of trained neural language models. As an alternative, they propose an n-gram proposal distribution that is adapted during training to follow the target distribution $P$ more closely.  For experiments, they report a speed-up factor of about 100.
+
+## Target Sampling
+
+Jean et al. (2015) propose to use Adaptive Importance Sampling for machine translation. In order to make the method more suitable for processing on a GPU with limited memory, they limit the number of target words that need to be sampled from. They do this by partitioning the training set and including only a fixed number of sample words in every partition, which form a subset $V′$ of the vocabulary.
+
+This essentially means that a separate proposal distribution $Q_i$ can be used for every partition $i$ of the training set, which assigns equal probability to all words included in the vocabulary subset $V'_i$ and zero probability to all other words.
+
+## Noise Contrastive Estimation
+
+Noise Contrastive Estimation (NCE) (Gutmann and Hyvärinen, 2010) is proposed by [Mnih and Teh (2012)](https://wiki.inf.ed.ac.uk/twiki/pub/CSTR/ListenSemester2_2009_10/4443871.pdf) as a more stable sampling method than Importance Sampling (IS), as we have seen that IS poses the risk of having the proposal distribution $Q$ diverge from the distribution $P$ that should be optimized. In contrast to the former, NCE does not try to estimate the probability of a word directly. Instead, it uses an auxiliary loss that also optimizes the goal of maximizing the probability of correct words.
+
+### Architecture
+
+Recall the pairwise-ranking criterion of Collobert and Weston (2008) that ranks positive windows higher than "corrupted" windows. Thus it's more effective than the regular neural language models that used cross-entropy criterion. NCE does a similar thing: We train a model to recognize the target word from noise. We can thus reduce the problem of predicting the correct word to a binary classification task, where the model tries to distinguish positive, genuine data from noise samples. 
+
+![](negative_sampling.png)
+
+### Model
+
+**Sample distribution**
+
+For every word $w_i$ given its context $c_i$ of $n$ previous words $w_{i-1}, \cdots, w_{i-n+1}$ in the training set, we thus generate $K$ noise samples $\tilde{w}_{ik}$ from a noise distribution $Q$ (As in Important Sampling, we can sample from the unigram distribution of the training set). As we need labels to perform our binary classification task, we designate all correct words $w_i$ given their context $c_i$ as true ($y=1$) and all noise samples $\tilde w_{ik}$ as false ($y=0$).
+
+By generating $K$ noise samples $\tilde w_{ij}$ for every genuine word $w_i$ given its context $c$, we are effectively sampling words from two different distributions: Correct words are sampled from the **empirical distribution** of the training set $P_{\text{train}}$ (which we don't know) and depend on their context $c$, whereas noise samples come from the **noise distribution** $Q$. We can thus represent the probability of sampling either a positive or a noise sample as a mixture of those two distributions, which are weighted based on the number of samples that come from each:
+$$
+P(y, w    |    c) = \dfrac{1}{K+1} P_{\text{train}}(w    |    c)+ \dfrac{K}{K+1}Q(w)
+$$
 
 
+**Class label distribution**
+
+Given this mixture, we can now calculate the probability that a sample came from the training $P_{\text{train}}$ distribution as a conditional probability of $y$ given $w$ and $c$:
+$$
+\begin {split}
+P(y=1  |  w,c) &= \dfrac{\dfrac{1}{K+1} P_{\text{train}}(w    |    c)}{\dfrac{1}{K+1} P_{\text{train}}(w    |    c)+ \dfrac{K}{K+1}Q(w)}  \\
+			   &= \dfrac{P_{\text{train}}(w    |    c)}{ P_{\text{train}}(w    |    c)+ KQ(w)}
+\end {split}
+$$
+As we don't know $P_{\text{train}}$ (which is what we would like to calculate), we replace $P_{\text{train}}$ with the probability of our model $P(w|c)$:
+$$
+P(y=1  |  w,c)= \dfrac{P(w    |    c)}{P(w    |    c) + k    Q(w)}
+$$
+and $P(y=0  |  w,c) = 1 - P(y=1  |  w,c)$.
+
+Note that computing $P(w|c)$, i.e. the probability of a word $w$ given its context $c$ is essentially the definition of our softmax:
+$$
+P(w    |    c) = \dfrac{\text{exp}({h^\top v'_{w}})}{\sum_{w_i \in V} \text{exp}({h^\top v'_{w_i}})}
+$$
+For notational brevity and unambiguity, let us designate the denominator of the softmax with $Z(c)={\sum_{w_i \in V} \text{exp}({h^\top v'_{w_i}})}$. Having to compute $P(w|c)$ means that -- again -- we need to compute $Z(c)$, which requires us to sum over the probabilities of all words in $V$. In the case of NCE, there exists a neat trick to circumvent this issue: We can treat the normalisation denominator $Z(c)$ as a parameter that the model can learn. Mnih and Teh (2012) and Vaswani et al. (2013)  actually keep $Z(c)$ fixed at 1 , which they report does not affect the model's performance. This assumption has the nice side-effect of reducing the model's parameters, while ensuring that the model self-normalizes by not depending on the explicit normalization in $Z(c)$ . Indeed, Zoph et al. (2016) find that even when learned, $Z(c) $ is close to 1 and has low variance.
+
+If we thus set $Z(c)$ to 1 in the above softmax equation, we are left with the following probability of word $w$ given a context $c$ :
+$$
+P(w|c) = \exp(h^\top v'_w)
+$$
+Thus $P(y=1  |  w,c)$ can be rewrite as follows:
+$$
+P(y=1  |  w,c)= \dfrac{\text{exp}({h^\top v'_{w}})}{\text{exp}({h^\top v'_{w}}) + K    Q(w)}
+$$
+**Training objective**
+
+We can now use logistic regression to minimize the negative log-likelihood, i.e. cross-entropy of our training examples against the noise:
+$$
+J_\theta = - \sum_{w_i \in V} \left( \text{log}    P(y=1  |  w_i,c_i) + K    \mathbb{E}_{\tilde{w}_{ik} \sim Q} [   \text{log}    P(y=0   |  \tilde{w}_{ij},c_i)] \right)
+$$
+Instead of computing the expectation $\mathbb{E}_{\tilde{w}_{ik} \sim Q}$ of our noise samples, which would still require summing over all words in $V$ to predict the normalized probability of a negative label, we can again take the mean with the Monte Carlo approximation:
+$$
+\begin {split}
+J_\theta = - \sum_{w_i \in V} \left[ \text{log}    P(y=1  |  w_i,c_i) +     \sum_{j=1}^K   \text{log}    P(y=0   |  \tilde{w}_{ij},c_i) \right]
+\end {split}
+$$
+And inserting the class label distributions $P(y=1  |  w,c)$ and $P(y=0  |  w,c)$ into the above loss function:
+$$
+J_\theta = - \sum_{w_i \in V} \left[ \text{log}    \dfrac{\text{exp}({h^\top v'_{w_i}})}{\text{exp}({h^\top v'_{w_i}}) + K    Q(w_i)} + \sum_{j=1}^K   \text{log}    (1 - \dfrac{\text{exp}({h^\top v'_{\tilde{w}_{ij}}})}{\text{exp}({h^\top v'_{\tilde{w}_{ij}}}) + K    Q(\tilde{w}_{ij})}) \right]
+$$
+**Summary**
+
+Note that NCE has nice theoretical guarantees: It can be shown that as we increase the number of noise samples $k$, the NCE derivative tends towards the gradient of the softmax function. Mnih and Teh (2012) report that 25 noise samples are sufficient to match the performance of the regular softmax, with an expected speed-up factor of about 45. 
+
+One caveat of NCE is that as typically different noise samples are sampled for every training word $w$, the noise samples and their gradients cannot be stored in dense matrices, which reduces the benefit of using NCE with GPUs, as it cannot benefit from fast dense matrix multiplications. Jozefowicz et al. (2016) and Zoph et al. (2016) independently propose to share noise samples across all training words in a mini-batch, so that NCE gradients can be computed with dense matrix operations, which are more efficient on GPUs.
+
+### Similarity between NCE and Important Sampling
+
+Jozefowicz et al. (2016) show that NCE and IS are not only similar as both are sampling-based approaches, but are strongly connected. While NCE uses a binary classification task, they show that IS can be described similarly using a surrogate loss function: Instead of performing binary classification with a logistic loss function like NCE, IS then optimises a multi-class classification problem with a softmax and cross-entropy loss function. They observe that as IS performs multi-class classification, it may be a better choice for language modelling, as the loss leads to tied updates between the data and noise samples rather than independent updates as with NCE. Indeed, Jozefowicz et al. (2016) use IS for language modelling and obtain state-of-the-art performance (as mentioned above) on the 1B Word benchmark.
+
+## Negative Sampling
+
+Negative Sampling (NEG), the objective that has been popularised by Mikolov et al. (2013), can be seen as an approximation to NCE. As we have mentioned above, NCE can be shown to approximate the loss of the softmax as the number of samples $k$ increases. NEG simplifies NCE and does away with this guarantee, as the objective of NEG is to learn high-quality word representations rather than achieving low perplexity on a test set, as is the goal in language modelling.
+
+Recall that NCE calculated the probability that a word $w$ comes from the empirical training distribution $P_{\text{train}}$ given a context $c$ as follows:
+$$
+P(y=1  |  w,c)= \dfrac{\text{exp}({h^\top v'_{w}})}{\text{exp}({h^\top v'_{w}}) + K    Q(w)}
+$$
+NEG also uses a logistic loss function to minimise the negative log-likelihood of words in the training set. The key difference to NCE is that NEG only approximates this probability by making it as easy to compute as possible. For this reason, it sets the most expensive term, $KQ(w)$ to 1, which leaves us with:
+$$
+P(y=1  |  w,c)= \dfrac{\text{exp}({h^\top v'_{w}})}{\text{exp}({h^\top v'_{w}}) + 1}
+$$
+Note $KQ(w)=1$ is exactly then true, when $K=|V|$ and $Q$ is a uniform distribution. In this case, NEG is equivalent to NCE. In all other cases, NEG only approximates NCE, which means that it will not directly optimise the likelihood of correct words, which is key for language modelling. While NEG may thus be useful for learning word embeddings, its lack of asymptotic consistency guarantees makes it inappropriate for language modelling.
+
+Further, $P(y=1  |  w,c)$ can be transformed into sigmoid function:
+$$
+P(y=1  |  w,c)= \dfrac{1}{1 + \text{exp}(-{h^\top v'_{w}})}
+$$
+If we now insert this back into the logistic regression loss from before, we get:
+$$
+\begin {split}
+J_\theta &= - \sum_{w_i \in V} \left[ \text{log}    P(y=1  |  w_i,c_i) +     \sum_{j=1}^K   \text{log}    P(y=0   |  \tilde{w}_{ij},c_i) \right]  \\
+		 &= - \sum_{w_i \in V} \left[ \text{log}    \dfrac{1}{1 + \text{exp}({-h^\top v'_{w_i}})} +    \sum_{j=1}^K   \text{log}    (1 - \dfrac{1}{1 + \text{exp}({-h^\top v'_{\tilde{w}_{ij}}})} \right]  \\
+		 &= - \sum_{w_i \in V} \left[ \text{log}    \dfrac{1}{1 + \text{exp}({-h^\top v'_{w_i}})} +    \sum_{j=1}^K   \text{log}    (\dfrac{1}{1 + \text{exp}({h^\top v'_{\tilde{w}_{ij}}})} \right]  \\
+		 &= - \sum_{w_i \in V} [ \text{log}    \sigma(h^\top v'_{w_i}) +    \sum_{j=1}^K   \text{log}    \sigma(-h^\top v'_{\tilde{w}_{ij}})]
+\end {split}
+$$
+To conform with the notation of Mikolov et al. (2013), $h$ must be replaced with $v_{w_I}$, $v'_{w_i}$ with $v_{w_O}$, $v'_{\tilde w_{ij}}$ with $v'_{w_i}$:
+$$
+J_\theta = - \sum_{w_i \in V} [ \text{log}    \sigma({w_I}^\top v'_{w_O}) +    \sum_{j=1}^K   \text{log}    \sigma(-{w_I}^\top v'_{w_i})]
+$$
 
 
+## Self Normalisation based sampling
+
+### Self Normalisation
+
+Even though the self-normalisation technique proposed by Devlin et al. is not a sampling-based approach, it provides further intuitions on self-normalisation of language models, which we briefly touched upon. We previously mentioned in passing that by setting the denominator $Z(c)$ of the NCE loss to 1, the model essentially self-normalises. This is a useful property as it allows us to skip computing the expensive normalisation in $Z(c)$.
+
+Recall that our loss function is:
+$$
+\begin {split}
+J_\theta &= - \sum\limits_i [\text{log}    \dfrac{\text{exp}({h^\top v'_{w_i}})}{Z(c)}] \\
+	     &= -\sum\limits_i [h^\top v'_{w_i} - \text{log}Z(c)]
+\end {split}
+$$
+If we are able to constrain our model so that it sets $Z(c)=1$, then we can avoid computing the normalisation in $Z(c)$ altogether. Devlin et al. (2014) thus propose to add a squared error penalty term to the loss function that encourages the model to keep $\log Z(c)$ as close as possible to 0:
+$$
+\begin {split}
+J_\theta &= - \sum\limits_i [h^\top v'_{w_i} + \text{log}    Z(c) - \alpha   (\text{log}(Z(c)) - 0)^2] \\
+		 &= - \sum\limits_i [h^\top v'_{w_i} + \text{log}    Z(c) - \alpha    \text{log}^2 Z(c)]
+\end {split}
+$$
+where $\alpha$ allows us to trade-off between model accuracy and mean self-normalisation. 
+
+### Infrequent Normalisation
+
+Andreas and Klein (2015) suggest that it should even be sufficient to only normalise a fraction of the training examples and still obtain approximate self-normalising behaviour. They thus propose Infrequent Normalisation (IN), which down-samples the penalty term, making this a sampling-based approach.
+
+Let us first decompose the sum of the previous loss into two terms:
+$$
+J_\theta = - \sum\limits_i h^\top v'_{w_i} +  \alpha \sum\limits_i \text{log}^2 Z(c)
+$$
+We can now down-sample the second term by only computing the normalisation for a subset $C$ of word $w_j$ and thus of contexts $c_j$:
+$$
+J_\theta = - \sum\limits_i h^\top v'_{w_i} +  \dfrac{\alpha}{\gamma} \sum\limits_{c_j \in C} \text{log}^2 Z(c_j)
+$$
+Andreas and Klein (2015) suggest that IF combines the strengths of NCE and self-normalisation as it does not require computing the normalisation for all training examples (which NCE avoids entirely), but like self-normalisation allows trading-off between the accuracy of the model and how well normalisation is approximated.
+
+# Which Approach to Choose?
+
+![](model-compare.png)
+
+As it always is, there is no clear winner that beats all other approaches on all datasets or tasks. For language modelling, the regular softmax still achieves very good performance on small vocabulary datasets, such as the Penn Treebank, and even performs well on medium datasets, such as Gigaword, but does very poorly on large vocabulary datasets, e.g. the 1B Word Benchmark. Target Sampling, Hierarchical Softmax, and Infrequent Normalisation in turn do better with large vocabularies.
+Differentiated Softmax generally does well for both small and large vocabularies and is the only approach that ensures a speed-up at test time. Interestingly, Hierarchical Softmax (HS) performs very poorly with small vocabularies. However, of all methods, HS is the fastest and processes most training examples in a given time frame. While NCE performs well with large vocabularies, it is generally worse than the other methods. Negative Sampling does not work well for language modelling, but it is generally superior for learning word representations, as attested by word2vec's success. Note that all results should be taken with a grain of salt: Chen et al. (2015) report having difficulties using Noise Contrastive Estimation in practice; Kim et al. (2016) use Hierarchical Softmax to achieve state-of-the-art with a small vocabulary, while Importance Sampling is used by the state-of-the-art language model by Jozefowicz et al. (2016) on a dataset with a large vocabulary.
+
+# Conclusion
+
+This overview of different methods to approximate the softmax attempted to provide you with intuitions that can not only be applied to improve and speed-up learning word representations, but are also relevant for language modelling and machine translation. As we have seen, most of these approaches are closely related and are driven by one uniting factor: the necessity to approximate the expensive normalisation in the denominator of the softmax. With these approaches in mind, I hope you feel now better equipped to train and understand your models and that you might even feel ready to work on learning better word representations yourself.
 
 # Reference
 
