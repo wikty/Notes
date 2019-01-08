@@ -219,7 +219,7 @@ E[g^2]^{(t)} &= \gamma E[g^2]^{(t-1)} + (1-\gamma) (g^{(t)})^2
 $$
 RMSprop as well divides the learning rate by an exponentially decaying average of squared gradients. Hinton suggests $\gamma$ to be set to 0.9, while a good default value for the learning rate $\eta$ is 0.001.
 
-## Adaptive Moment Estimation
+## Adam
 
 Adaptive Moment Estimation (Adam) is another method that computes adaptive learning rates for each parameter. In addition to storing an exponentially decaying average of past squared gradients ($v^{(t)}$ in the following formulation) like Adadelta and RMSprop, Adam also keeps an exponentially decaying average of past gradients ($m^{(t)}$ in the following), similar to momentum. Whereas momentum can be seen as a ball running down a slope, Adam behaves like a heavy ball with friction, which thus prefers flat minima in the error surface.
 
@@ -295,8 +295,50 @@ m^{(t)} &= \gamma m^{(t-1)} + \eta g^{(t)} \\
 \theta^{(t+1)} &= \theta^{(t)} - m^{(t)} 
 \end{split}
 $$
-where $\theta_\text{next}$ is an approximation of the next position of the parameters.
+where $\theta_\text{next}$ is an approximation of the next position of the parameters. We can arrange those formulations as following:
+$$
+\begin{split} 
 
+g^{(t)} & = \nabla_\theta J(\theta^{(t)} - \gamma m^{(t-1)}) \\
+
+\theta^{(t+1)} &= \theta^{(t)} - (\gamma m^{(t-1)} + \eta g^{(t)}) 
+\end{split}
+$$
+We can see that the momentum step $m^{(t-1)}$ is applied twice -- one time for updating the gradient $g^{(t)}$ and a second time for updating the parameters $\theta^{(t+1)}$. Many proposes to modify NAG by the following way: to apply the look-ahead momentum vector $m^{(t)}$ instead of the previous momentum vector $m^{(t-1)}$ in the above NAG directly to update the current parameters.
+$$
+\begin{split} 
+g^{(t)} & = \nabla_\theta J(\theta) \\
+m^{(t)} &= \gamma m^{(t-1)} + \eta g^{(t)} \\ 
+\theta^{(t+1)} &= \theta^{(t)} - (\gamma m^{(t)} + \eta g^{(t)})
+\end{split}
+$$
+
+Similarly, we can add Nesterov momentum into Adam by replacing the previous momentum vector with the current momentum vector. First, the Adam update rule is the following:
+$$
+\begin {split}
+g^{(t)} & = \nabla_\theta J(\theta) \\
+m^{(t)} &= \beta_1 m^{(t-1)} + (1 - \beta_1) g^{(t)} \\
+v^{(t)} &= \beta_2 v^{(t-1)} + (1 - \beta_2) g^{(t)}  \\
+\hat{m}^{(t)} &= \frac {m^{(t)}} {1 - \beta^t_1} \\
+\hat{v}^{(t)} &= \frac {v^{(t)}} {1 - \beta^t_2} \\
+\theta^{(t+1)} &= \theta^{(t)} - \frac {\eta} {\sqrt {\hat{v}^{(t)}} + \epsilon} \odot \hat{m}^{(t)} \\
+			   &= \theta^{(t)} - {\frac {\eta} {\sqrt {\hat{v}^{(t)}} + \epsilon}} \odot {\frac {m^{(t)}} {1 - \beta^t_1}} \\
+			   &= \theta^{(t)} - {\frac {\eta} {\sqrt {\hat{v}^{(t)}} + \epsilon}} \odot {\frac {\beta_1 m^{(t-1)} + (1 - \beta_1) g^{(t)}} {1 - \beta^t_1}} \\
+			   &= \theta^{(t)} - {\frac {\eta} {\sqrt {\hat{v}^{(t)}} + \epsilon}} \odot \left( {\frac {\beta_1 m^{(t-1)}} {1 - \beta^t_1}} + {\frac {(1 - \beta_1) g^{(t)}} {1 - \beta^t_1}} \right) \\
+			   &= \theta^{(t)} - {\frac {\eta} {\sqrt {\hat{v}^{(t)}} + \epsilon}} \odot \left( {\frac { m^{(t-1)}} {1 - \beta^{t-1}_1}} \cdot {\frac {\beta_1 ({1 - \beta^{t-1}_1})} {{1 - \beta^t_1}}} + {\frac {(1 - \beta_1) g^{(t)}} {1 - \beta^t_1}} \right) \\
+			   &= \theta^{(t)} - {\frac {\eta} {\sqrt {\hat{v}^{(t)}} + \epsilon}} \odot \left( { \hat{m}^{(t-1)}} \cdot {\frac {\beta_1 ({1 - \beta^{t-1}_1})} {{1 - \beta^t_1}}} + {\frac {(1 - \beta_1) g^{(t)}} {1 - \beta^t_1}} \right) \\
+\end {split}
+$$
+We can now add Nesterov momentum just as we did previously by simply replacing this bias-corrected estimate of the momentum vector of the previous time step $\hat{m}^{(t-1)}$ with the bias-corrected estimate of the current momentum vector $\hat{m}^{(t)}$, which gives us the Nadam update rule:
+$$
+\theta{(t+1)} = \theta^{(t)} - \frac {\eta} {\sqrt {\hat{v}^{(t)}} + \epsilon} \odot \left( \beta_1 \hat{m}^{(t)} + {\frac {(1 - \beta_1) g^{(t)}} {1 - \beta^t_1}} \right)
+$$
+
+## AMSGrad
+
+Reddi et al. (2018) shows that the exponential moving average of past squared gradients as a reason for the poor generalization behaviour of adaptive learning rate methods, e.g. Adadelta, RMSprop, Adam and so on. Recall that the introduction of the exponential average was well-motivated: It should prevent the learning rates to become infinitesimally small as training progresses, the key flaw of the Adagrad algorithm. However, this short-term memory of the gradients becomes an obstacle in other scenarios.
+
+In settings where Adam converges to a suboptimal solution, it has been observed that some minibatches provide large and informative gradients, but as these minibatches only occur rarely, exponential averaging diminishes their influence, which leads to poor convergence. To fix this behaviour, the authors propose a new algorithm, AMSGrad that uses the maximum of past squared gradients $v^{(t)}$ rather than the exponential average to update the parameters.
 
 
 # Comparison between gradient descent optimization algorithms 
