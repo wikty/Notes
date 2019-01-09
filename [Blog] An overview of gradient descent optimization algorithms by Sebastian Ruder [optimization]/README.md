@@ -424,5 +424,9 @@ $$
 $$
 They show that adding this noise makes networks more robust to poor initialization and helps training particularly deep and complex networks. They suspect that the added noise gives the model more chances to escape and find new local minima, which are more frequent for deeper models.
 
+# Optimization for Deep Learning Highlights in 2017
+
+This [post](http://ruder.io/deep-learning-optimization-2017/) discusses the most exciting highlights and most promising directions in optimization for Deep Learning in 2017.
+
 
 
