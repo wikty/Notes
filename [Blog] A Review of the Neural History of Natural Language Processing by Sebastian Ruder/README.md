@@ -184,3 +184,13 @@ In 2006, OntoNotes (Hovy et al., 2006), a large **multilingual corpus** with mul
 In 2008, Milne and Witten described how Wikipedia can be used to enrich machine learning methods. To this date, Wikipedia is one of the most useful resources for training ML methods, whether for entity linking and disambiguation, language modelling, as a knowledge base, or a variety of other tasks.
 
 In 2009, the idea of distant supervision (Mintz et al., 2009) was proposed. Distant supervision leverages information from heuristics or existing knowledge bases to generate noisy patterns that can be used to automatically extract examples from large corpora. Distant supervision has been used extensively and is a common technique in relation extraction, information extraction, and sentiment analysis, among other tasks.
+
+# The 4 Biggest Open Problems in NLP
+
+[This](http://ruder.io/4-biggest-open-problems-in-nlp/) is the second blog post in a two-part series. The [first post](http://ruder.io/a-review-of-the-recent-history-of-nlp/) discussed major recent advances in NLP focusing on neural network-based methods. This post discusses major open problems in NLP. In the weeks leading up to the Indaba, we asked NLP experts a number of simple but big questions. Based on the responses, we identified the four problems that were mentioned most often:
+
+- Natural language understanding
+- NLP for low-resource scenarios
+- Reasoning about large or multiple documents
+- Datasets, problems, and evaluation
+

@@ -18,7 +18,7 @@ Then We want to find the choice of $\theta$ that minimizes $J(\theta)$.
 
 # Optimization
 
-There are many algorithms for minimizing functions like $J(\theta)$ and we will describe some very effective ones that are easy to implement in later. For now, let’s take for granted the fact that most commonly-used algorithms for function minimization require us to provide two pieces of information about $J(\theta)$:
+There are many algorithms for minimizing functions like $J(\theta)​$ and we will describe some very effective ones that are easy to implement in later. For now, let’s take for granted the fact that most commonly-used algorithms for function minimization require us to provide two pieces of information about $J(\theta)​$:
 
 - we need to compute cost function: $J(\theta)$ for any choice of $\theta$. 
 - we need to compute the gradient of cost function: $\nabla_\theta J(\theta)$ for any choice of $\theta$. 
